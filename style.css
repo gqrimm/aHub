@@ -1,144 +1,103 @@
 :root {
-    --bg: #ffef7d;
-    --card-bg: #ffffff;
+    --bg: #fffcf2;
+    --card: #ffffff;
     --text: #000000;
-    --accent: #5d5dff;
-    --danger: #ff5d5d;
-    --border-width: 3px;
-    --shadow: 6px 6px 0px #000;
+    --primary: #ffde59; /* Classic Neal yellow */
+    --danger: #ff5757;
+    --border: #000000;
 }
 
-body {
-    background-color: var(--bg);
-    color: var(--text);
-    margin: 0;
-    padding: 20px;
-    font-family: 'Outfit', sans-serif;
+* { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body { 
+    background-color: var(--bg); 
+    color: var(--text); 
+    margin: 0; padding: 0; 
 }
 
 .hidden { display: none !important; }
 
-/* Authentication UI */
-#auth-overlay {
-    position: fixed; inset: 0; background: var(--bg);
-    display: flex; align-items: center; justify-content: center; z-index: 1000;
+/* LAYOUT */
+.main-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 40px; border-bottom: 3px solid var(--border);
+    background: white;
 }
 
-.login-card { text-align: center; }
-
-/* Common UI Elements */
-.neal-input {
-    display: block;
-    border: var(--border-width) solid #000;
-    border-radius: 12px;
-    padding: 12px;
-    font-size: 1.1rem;
-    margin: 10px auto;
-    width: 100%;
-    max-width: 300px;
-}
-
-.neal-btn {
-    background: var(--accent);
-    color: white;
-    border: var(--border-width) solid #000;
-    border-radius: 12px;
-    padding: 12px 24px;
-    font-weight: 900;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: var(--shadow);
-    transition: transform 0.1s, box-shadow 0.1s;
-}
-
-.neal-btn:active {
-    transform: translate(3px, 3px);
-    box-shadow: 2px 2px 0px #000;
-}
-
-.admin-btn { background: var(--danger); }
-.cancel-btn { background: #bbb; }
-
-/* Grid Layout */
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1200px;
-    margin: 0 auto 40px auto;
-}
-
-.logo { font-size: 3rem; font-weight: 900; margin: 0; }
-
-.grid {
+.grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 30px;
-    max-width: 1200px;
-    margin: 0 auto;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px; padding: 40px;
 }
 
-/* Modules */
+/* CARDS / MODULES */
 .module {
-    background: var(--card-bg);
-    border: var(--border-width) solid #000;
-    border-radius: 24px;
-    padding: 25px;
-    box-shadow: var(--shadow);
+    background: white;
+    border: 3px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    box-shadow: 6px 6px 0px var(--border);
 }
 
 .module-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 2px solid #eee;
+    display: flex; justify-content: space-between; align-items: center;
     margin-bottom: 15px;
 }
 
-.iframe-container {
-    width: 100%;
-    height: 400px;
-    overflow: hidden;
-    border-radius: 12px;
-    border: 1px solid #ddd;
+.module h3 { margin: 0; font-size: 1.2rem; }
+
+/* BUTTONS */
+.neal-btn {
+    padding: 10px 20px;
+    border: 3px solid var(--border);
+    border-radius: 10px;
+    font-weight: bold; cursor: pointer;
+    background: white;
+    transition: transform 0.1s;
 }
 
-iframe { width: 100%; height: 100%; border: none; }
+.neal-btn:active { transform: translateY(3px); }
+.neal-btn.primary { background: var(--primary); }
+.neal-btn.danger { background: var(--danger); color: white; }
 
-/* Calendar Tracker Styles */
+.neal-input {
+    width: 100%; padding: 12px;
+    border: 3px solid var(--border);
+    border-radius: 10px; margin-bottom: 15px;
+    font-size: 1rem;
+}
+
+/* CALENDAR GRID */
 .calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 8px;
-    margin-top: 15px;
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
 }
 
 .day-box {
-    aspect-ratio: 1;
-    border: 2px solid #eee;
-    border-radius: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 0.7rem;
-    transition: 0.2s;
+    aspect-ratio: 1; border: 2px solid #ddd;
+    border-radius: 4px; display: flex;
+    align-items: center; justify-content: center;
+    font-size: 10px; cursor: pointer;
 }
 
-.day-box:hover { border-color: var(--accent); }
+.day-active { background: var(--primary); border-color: var(--border); }
 
-.day-active {
-    background: var(--accent);
-    color: white;
-    border-color: #000;
+/* FLOATING ACTION BUTTON */
+.fab {
+    position: fixed; bottom: 30px; right: 30px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: var(--primary); border: 3px solid var(--border);
+    font-size: 30px; font-weight: bold; cursor: pointer;
+    box-shadow: 4px 4px 0px var(--border);
 }
 
-#modal-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 2000;
+/* OVERLAYS */
+.overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
 }
 
-.modal-content { width: 400px; }
+.auth-card {
+    background: white; padding: 40px; border: 4px solid var(--border);
+    border-radius: 20px; width: 100%; max-width: 400px;
+}
