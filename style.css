@@ -1,103 +1,50 @@
 :root {
-    --bg: #fffcf2;
-    --card: #ffffff;
-    --text: #000000;
-    --primary: #ffde59; /* Classic Neal yellow */
-    --danger: #ff5757;
-    --border: #000000;
+    --bg: #f0f0f0;
+    --primary: #ffde59;
+    --danger: #ff5c5c;
+    --border: 3px solid #000;
+    --shadow: 5px 5px 0px #000;
 }
 
-* { box-sizing: border-box; font-family: 'Inter', sans-serif; }
-
-body { 
-    background-color: var(--bg); 
-    color: var(--text); 
-    margin: 0; padding: 0; 
-}
-
+body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; }
 .hidden { display: none !important; }
 
-/* LAYOUT */
-.main-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 20px 40px; border-bottom: 3px solid var(--border);
-    background: white;
-}
+/* Dashboard UI */
+.main-header { display: flex; justify-content: space-between; padding: 20px; background: white; border-bottom: var(--border); }
+.workspace-bar { padding: 20px; display: flex; gap: 10px; align-items: center; }
+.grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 20px; padding: 20px; }
 
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px; padding: 40px;
-}
-
-/* CARDS / MODULES */
+/* The Intuitive Card */
 .module {
-    background: white;
-    border: 3px solid var(--border);
-    border-radius: 16px;
-    padding: 20px;
-    position: relative;
-    box-shadow: 6px 6px 0px var(--border);
+    background: white; border: var(--border); border-radius: 15px;
+    box-shadow: var(--shadow); display: flex; min-height: 200px; overflow: hidden;
 }
 
-.module-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 15px;
+.card-left {
+    flex: 1; padding: 15px; border-right: 2px solid #eee;
+    background: #fafafa;
 }
 
-.module h3 { margin: 0; font-size: 1.2rem; }
-
-/* BUTTONS */
-.neal-btn {
-    padding: 10px 20px;
-    border: 3px solid var(--border);
-    border-radius: 10px;
-    font-weight: bold; cursor: pointer;
-    background: white;
-    transition: transform 0.1s;
+.card-right {
+    flex: 1; padding: 15px; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
 }
 
-.neal-btn:active { transform: translateY(3px); }
+/* Calendar */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.day-box {
+    aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px;
+    font-size: 0.6rem; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.day-active { background: var(--primary); border-color: #000; font-weight: bold; }
+
+/* Inputs & Buttons */
+.neal-input { border: var(--border); border-radius: 8px; padding: 8px; font-weight: bold; }
+.neal-btn { border: var(--border); border-radius: 8px; padding: 8px 16px; font-weight: 900; cursor: pointer; background: white; transition: 0.1s; }
+.neal-btn:active { transform: translate(2px, 2px); }
 .neal-btn.primary { background: var(--primary); }
 .neal-btn.danger { background: var(--danger); color: white; }
 
-.neal-input {
-    width: 100%; padding: 12px;
-    border: 3px solid var(--border);
-    border-radius: 10px; margin-bottom: 15px;
-    font-size: 1rem;
-}
-
-/* CALENDAR GRID */
-.calendar-grid {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
-}
-
-.day-box {
-    aspect-ratio: 1; border: 2px solid #ddd;
-    border-radius: 4px; display: flex;
-    align-items: center; justify-content: center;
-    font-size: 10px; cursor: pointer;
-}
-
-.day-active { background: var(--primary); border-color: var(--border); }
-
-/* FLOATING ACTION BUTTON */
-.fab {
-    position: fixed; bottom: 30px; right: 30px;
-    width: 60px; height: 60px; border-radius: 50%;
-    background: var(--primary); border: 3px solid var(--border);
-    font-size: 30px; font-weight: bold; cursor: pointer;
-    box-shadow: 4px 4px 0px var(--border);
-}
-
-/* OVERLAYS */
-.overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center; z-index: 100;
-}
-
-.auth-card {
-    background: white; padding: 40px; border: 4px solid var(--border);
-    border-radius: 20px; width: 100%; max-width: 400px;
-}
+.fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; border: var(--border); background: var(--primary); font-size: 30px; cursor: pointer; box-shadow: var(--shadow); }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.auth-card { background: white; padding: 30px; border: var(--border); border-radius: 20px; width: 350px; }
