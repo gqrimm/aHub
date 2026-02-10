@@ -1,77 +1,106 @@
-/**
- * CONFIGURATION
- * Get these from your Supabase Project Settings > API
- */
-const SUPABASE_URL = 'https://ynnqidfodgravvhxhbuw.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_ziIy4oGXycJNYeZRKyqNKg_GwnJrz6f';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const app = {
     user: null,
-    trackers: [],
+    currentWorkspace: localStorage.getItem('active_workspace') || null,
 
-    // 1. AUTHENTICATION (Credentials are handled by Supabase, not hardcoded)
-    login: async function() {
+    // --- INITIALIZE (Persistence) ---
+    init: async function() {
+        // Check if a user is already logged in from a previous session
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        
+        if (session) {
+            this.user = session.user;
+            this.initDashboard();
+        }
+    },
+
+    // --- REGISTRATION ---
+    register: async function() {
         const email = document.getElementById('user').value;
         const password = document.getElementById('pass').value;
 
-        // This checks the credentials against the Supabase User Database
-        const { data, error } = await sb.auth.signInWithPassword({
+        const { data, error } = await supabaseClient.auth.signUp({
             email: email,
             password: password,
         });
 
-        if (error) {
-            alert("Access Denied: " + error.message);
-        } else {
+        if (error) alert("Error: " + error.message);
+        else alert("Registration successful! Check your email for a confirmation link, then login.");
+    },
+
+    login: async function() {
+        const email = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) alert(error.message);
+        else {
             this.user = data.user;
-            document.getElementById('auth-overlay').classList.add('hidden');
-            document.getElementById('main-content').classList.remove('hidden');
-            this.fetchTrackers(); // Load data from cloud
+            this.initDashboard();
         }
     },
 
-    // 2. FETCH DATA (Get trackers from the cloud)
-    fetchTrackers: async function() {
-        const { data, error } = await sb
-            .from('trackers')
-            .select('*')
-            .order('created_at', { ascending: true });
-
-        if (error) {
-            console.error("Error fetching data:", error);
-        } else {
-            this.trackers = data;
-            this.render();
+    // --- WORKSPACE LOGIC ---
+    joinWorkspace: function() {
+        const id = document.getElementById('join-work-id').value;
+        if (id) {
+            this.currentWorkspace = id;
+            localStorage.setItem('active_workspace', id);
+            alert(`Joined workspace: ${id}`);
+            this.fetchTrackers();
         }
     },
 
-    // 3. CREATE NEW TRACKER (Save to cloud)
     createTracker: async function() {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
+        
+        // When creating a tracker, we tag it with the Workspace ID
+        const { error } = await supabaseClient.from('trackers').insert([
+            { 
+                name, 
+                type, 
+                user_id: this.user.id, 
+                workspace_id: this.currentWorkspace, // Sharing magic happens here
+                history_data: {} 
+            }
+        ]);
 
-        if (!name) return alert("Enter a name");
-
-        const newTracker = {
-            user_id: this.user.id,
-            name: name,
-            type: type,
-            history_data: {} // Empty JSON object for calendar data
-        };
-
-        const { error } = await sb.from('trackers').insert([newTracker]);
-
-        if (error) {
-            alert("Error saving tracker: " + error.message);
-        } else {
-            document.getElementById('track-name').value = '';
+        if (!error) {
             this.closeModal();
             this.fetchTrackers();
         }
     },
 
-    // 4. LOG DATA (Update cloud record)
+    fetchTrackers: async function() {
+        let query = supabaseClient.from('trackers').select('*');
+
+        // If in a workspace, fetch trackers for that workspace
+        if (this.currentWorkspace) {
+            query = query.eq('workspace_id', this.currentWorkspace);
+        } else {
+            query = query.eq('user_id', this.user.id);
+        }
+
+        const { data, error } = await query.order('created_at', { ascending: true });
+        if (!error) {
+            this.trackers = data;
+            this.render();
+        }
+    },
+
+    initDashboard: function() {
+        document.getElementById('auth-overlay').classList.add('hidden');
+        document.getElementById('main-content').classList.remove('hidden');
+        document.getElementById('workspace-section').classList.remove('hidden');
+        this.fetchTrackers();
+    },
+
+        // 4. LOG DATA (Update cloud record)
     logEntry: async function(trackerId, dateKey) {
         const tracker = this.trackers.find(t => t.id === trackerId);
         let currentHistory = { ...tracker.history_data };
@@ -156,4 +185,8 @@ const app = {
             container.appendChild(card);
         });
     }
+
 };
+
+// Start the app on load
+app.init();
