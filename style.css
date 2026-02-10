@@ -1,50 +1,47 @@
 :root {
-    --bg: #f0f0f0;
+    --bg: #f5f5f5;
     --primary: #ffde59;
-    --danger: #ff5c5c;
+    --danger: #ff5757;
     --border: 3px solid #000;
     --shadow: 5px 5px 0px #000;
 }
 
-body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; }
+* { box-sizing: border-box; }
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); margin: 0; overflow-x: hidden; }
 .hidden { display: none !important; }
 
 /* Dashboard UI */
-.main-header { display: flex; justify-content: space-between; padding: 20px; background: white; border-bottom: var(--border); }
-.workspace-bar { padding: 20px; display: flex; gap: 10px; align-items: center; }
+.main-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; background: white; border-bottom: var(--border); }
+.workspace-bar { padding: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #eee; border-bottom: 2px solid #ddd; }
 .grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(450px, 1fr)); gap: 20px; padding: 20px; }
 
-/* The Intuitive Card */
+/* The Intuitive Split Card */
 .module {
     background: white; border: var(--border); border-radius: 15px;
-    box-shadow: var(--shadow); display: flex; min-height: 200px; overflow: hidden;
+    box-shadow: var(--shadow); display: flex; min-height: 190px; overflow: hidden;
 }
 
-.card-left {
-    flex: 1; padding: 15px; border-right: 2px solid #eee;
-    background: #fafafa;
-}
+.card-left { flex: 1.2; padding: 15px; border-right: 2px solid #eee; background: #fafafa; min-width: 0; }
+.card-right { flex: 0.8; padding: 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; background: white; min-width: 0; }
 
-.card-right {
-    flex: 1; padding: 15px; display: flex; flex-direction: column;
-    justify-content: center; align-items: center; text-align: center;
-}
-
-/* Calendar */
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 10px; width: 100%; }
 .day-box {
     aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px;
-    font-size: 0.6rem; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-size: 0.7rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.1s;
 }
 .day-active { background: var(--primary); border-color: #000; font-weight: bold; }
 
 /* Inputs & Buttons */
-.neal-input { border: var(--border); border-radius: 8px; padding: 8px; font-weight: bold; }
-.neal-btn { border: var(--border); border-radius: 8px; padding: 8px 16px; font-weight: 900; cursor: pointer; background: white; transition: 0.1s; }
+.neal-input { border: var(--border); border-radius: 8px; padding: 10px; font-weight: bold; font-size: 14px; outline: none; }
+.neal-input.small { width: 140px; }
+.neal-btn { border: var(--border); border-radius: 8px; padding: 10px 18px; font-weight: 900; cursor: pointer; background: white; transition: transform 0.1s; }
 .neal-btn:active { transform: translate(2px, 2px); }
 .neal-btn.primary { background: var(--primary); }
 .neal-btn.danger { background: var(--danger); color: white; }
 
-.fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; border: var(--border); background: var(--primary); font-size: 30px; cursor: pointer; box-shadow: var(--shadow); }
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.auth-card { background: white; padding: 30px; border: var(--border); border-radius: 20px; width: 350px; }
+/* Portal Card Style */
+.portal-card { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 15px; }
+
+.fab { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; border: var(--border); background: var(--primary); font-size: 30px; cursor: pointer; box-shadow: var(--shadow); z-index: 10; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.auth-card { background: white; padding: 30px; border: var(--border); border-radius: 20px; width: 350px; text-align: center; }
