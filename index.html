@@ -1,77 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>aHub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="app.js" defer></script>
 </head>
 <body>
 
-<div id="auth-overlay">
-    <div class="login-card">
-        <h1 id="auth-title">Welcome.</h1>
-        <input type="email" id="user" class="neal-input" placeholder="Email">
-        <input type="password" id="pass" class="neal-input" placeholder="Password">
-        
-        <div id="auth-actions">
-            <button class="neal-btn" onclick="app.login()">Login</button>
-            <button class="neal-btn" style="background:#fff; color:#000" onclick="app.register()">Sign Up</button>
-        </div>
-
-        <div id="workspace-section" class="hidden" style="margin-top:20px; border-top: 2px solid #000; padding-top:20px;">
-            <p>Join a Shared Space:</p>
-            <input type="text" id="join-work-id" class="neal-input" placeholder="Enter Workspace ID">
-            <button class="neal-btn" onclick="app.joinWorkspace()">Join Space</button>
+    <div id="auth-overlay" class="overlay">
+        <div class="auth-card">
+            <h1>Welcome.</h1>
+            <input type="email" id="user" placeholder="Email" class="neal-input">
+            <input type="password" id="pass" placeholder="Password" class="neal-input">
+            <div class="auth-buttons">
+                <button onclick="app.login()" class="neal-btn primary">Login</button>
+                <button onclick="app.register()" class="neal-btn secondary">Sign Up</button>
+            </div>
         </div>
     </div>
-</div>
 
     <div id="main-content" class="hidden">
-        <header>
-            <h1 class="logo">MY SPACE.</h1>
-            <div class="nav-controls">
-                <button class="neal-btn admin-btn" onclick="app.showAdmin()">Admin</button>
-                <button class="neal-btn add-btn" onclick="app.openModal()">+ Add Module</button>
-                <button class="neal-btn" onclick="app.copyInviteLink()">🔗 Copy Invite Link</button>
+        <header class="main-header">
+            <div class="logo">Dashboard</div>
+            <div class="header-actions">
+                <button onclick="app.logout()" class="neal-btn danger">Logout</button>
             </div>
         </header>
 
-        <div class="grid" id="module-container">
-            <div class="module">
-                <div class="module-header">
-                    <h3>AMVGG Trade Checker</h3>
-                </div>
-                <div class="iframe-container">
-                    <iframe src="https://amvgg.com/calculator" id="trade-frame"></iframe>
+        <section class="workspace-bar">
+            <div class="ws-info">
+                <input type="text" id="join-work-id" placeholder="Private Space" class="neal-input small">
+                <button onclick="app.joinWorkspace()" class="neal-btn">Join</button>
+            </div>
+            <div class="ws-tools">
+                <button onclick="app.createNewWorkspace()" class="neal-btn primary">✨ New Space</button>
+                <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
+            </div>
+        </section>
+
+        <main id="module-container" class="grid-container">
+            <div class="module portal">
+                <h3>Adopt Me Trade Checker</h3>
+                <div class="portal-body">
+                    <span>⚖️</span>
+                    <a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open Calculator ↗</a>
                 </div>
             </div>
-            </div>
+            </main>
+
+        <button class="fab" onclick="app.openModal()">+</button>
     </div>
 
-    <div id="modal-overlay" class="hidden">
-        <div class="module modal-content">
+    <div id="modal-overlay" class="overlay hidden">
+        <div class="auth-card">
             <h2>New Tracker</h2>
-            <label>Name</label>
-            <input type="text" id="track-name" class="neal-input" placeholder="e.g., Water Intake">
-            
-            <label>Measurement Unit</label>
+            <input type="text" id="track-name" placeholder="Tracker Name" class="neal-input">
             <select id="track-type" class="neal-input">
-                <option value="count">Simple Count (1, 2, 3...)</option>
-                <option value="ml">Volume (ml)</option>
-                <option value="g">Weight (grams)</option>
                 <option value="bool">Checkmark (Yes/No)</option>
+                <option value="text">Text/Number Entry</option>
             </select>
-            
-            <div class="modal-actions">
-                <button class="neal-btn" onclick="app.createTracker()">Create</button>
-                <button class="neal-btn cancel-btn" onclick="app.closeModal()">Cancel</button>
+            <div class="auth-buttons">
+                <button onclick="app.createTracker()" class="neal-btn primary">Create</button>
+                <button onclick="app.closeModal()" class="neal-btn">Cancel</button>
             </div>
         </div>
     </div>
 
-    <script src="app.js"></script>
 </body>
 </html>
