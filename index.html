@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Neal-Style Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div id="auth-overlay">
+        <div class="login-card">
+            <h1>Welcome.</h1>
+            <p>Please enter your credentials to access the data store.</p>
+            <input type="text" id="user" class="neal-input" placeholder="Username">
+            <input type="password" id="pass" class="neal-input" placeholder="Password">
+            <button class="neal-btn" onclick="app.login()">Enter Site</button>
+        </div>
+    </div>
+
+    <div id="main-content" class="hidden">
+        <header>
+            <h1 class="logo">MY SPACE.</h1>
+            <div class="nav-controls">
+                <button class="neal-btn admin-btn" onclick="app.showAdmin()">Admin</button>
+                <button class="neal-btn add-btn" onclick="app.openModal()">+ Add Module</button>
+            </div>
+        </header>
+
+        <div class="grid" id="module-container">
+            <div class="module">
+                <div class="module-header">
+                    <h3>AMVGG Trade Checker</h3>
+                </div>
+                <div class="iframe-container">
+                    <iframe src="https://amvgg.com/calculator" id="trade-frame"></iframe>
+                </div>
+            </div>
+            </div>
+    </div>
+
+    <div id="modal-overlay" class="hidden">
+        <div class="module modal-content">
+            <h2>New Tracker</h2>
+            <label>Name</label>
+            <input type="text" id="track-name" class="neal-input" placeholder="e.g., Water Intake">
+            
+            <label>Measurement Unit</label>
+            <select id="track-type" class="neal-input">
+                <option value="count">Simple Count (1, 2, 3...)</option>
+                <option value="ml">Volume (ml)</option>
+                <option value="g">Weight (grams)</option>
+                <option value="bool">Checkmark (Yes/No)</option>
+            </select>
+            
+            <div class="modal-actions">
+                <button class="neal-btn" onclick="app.createTracker()">Create</button>
+                <button class="neal-btn cancel-btn" onclick="app.closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
