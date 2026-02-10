@@ -1,0 +1,144 @@
+:root {
+    --bg: #ffef7d;
+    --card-bg: #ffffff;
+    --text: #000000;
+    --accent: #5d5dff;
+    --danger: #ff5d5d;
+    --border-width: 3px;
+    --shadow: 6px 6px 0px #000;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    font-family: 'Outfit', sans-serif;
+}
+
+.hidden { display: none !important; }
+
+/* Authentication UI */
+#auth-overlay {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+
+.login-card { text-align: center; }
+
+/* Common UI Elements */
+.neal-input {
+    display: block;
+    border: var(--border-width) solid #000;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 1.1rem;
+    margin: 10px auto;
+    width: 100%;
+    max-width: 300px;
+}
+
+.neal-btn {
+    background: var(--accent);
+    color: white;
+    border: var(--border-width) solid #000;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 900;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.neal-btn:active {
+    transform: translate(3px, 3px);
+    box-shadow: 2px 2px 0px #000;
+}
+
+.admin-btn { background: var(--danger); }
+.cancel-btn { background: #bbb; }
+
+/* Grid Layout */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto 40px auto;
+}
+
+.logo { font-size: 3rem; font-weight: 900; margin: 0; }
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Modules */
+.module {
+    background: var(--card-bg);
+    border: var(--border-width) solid #000;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: var(--shadow);
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    margin-bottom: 15px;
+}
+
+.iframe-container {
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid #ddd;
+}
+
+iframe { width: 100%; height: 100%; border: none; }
+
+/* Calendar Tracker Styles */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.day-box {
+    aspect-ratio: 1;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: 0.2s;
+}
+
+.day-box:hover { border-color: var(--accent); }
+
+.day-active {
+    background: var(--accent);
+    color: white;
+    border-color: #000;
+}
+
+#modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2000;
+}
+
+.modal-content { width: 400px; }
