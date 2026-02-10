@@ -12,44 +12,37 @@
 
     <div id="auth-overlay" class="overlay">
         <div class="auth-card">
-            <h1>Welcome.</h1>
+            <h1>Welcome</h1>
             <input type="email" id="user" placeholder="Email" class="neal-input">
             <input type="password" id="pass" placeholder="Password" class="neal-input">
             <div class="auth-buttons">
                 <button onclick="app.login()" class="neal-btn primary">Login</button>
-                <button onclick="app.register()" class="neal-btn secondary">Sign Up</button>
+                <button onclick="app.register()" class="neal-btn">Sign Up</button>
             </div>
         </div>
     </div>
 
     <div id="main-content" class="hidden">
         <header class="main-header">
-            <div class="logo">Dashboard</div>
+            <div class="logo">DASHBOARD</div>
             <div class="header-actions">
                 <button onclick="app.logout()" class="neal-btn danger">Logout</button>
             </div>
         </header>
 
         <section class="workspace-bar">
-            <div class="ws-info">
-                <input type="text" id="join-work-id" placeholder="Private Space" class="neal-input small">
-                <button onclick="app.joinWorkspace()" class="neal-btn">Join</button>
-            </div>
-            <div class="ws-tools">
-                <button onclick="app.createNewWorkspace()" class="neal-btn primary">✨ New Space</button>
-                <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
-            </div>
+            <input type="text" id="join-work-id" placeholder="Workspace ID" class="neal-input small">
+            <button onclick="app.joinWorkspace()" class="neal-btn">Join</button>
+            <button onclick="app.createNewWorkspace()" class="neal-btn primary">✨ New</button>
+            <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
         </section>
 
         <main id="module-container" class="grid-container">
-            <div class="module portal">
-                <h3>Adopt Me Trade Checker</h3>
-                <div class="portal-body">
-                    <span>⚖️</span>
-                    <a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open Calculator ↗</a>
-                </div>
+            <div class="module portal-card">
+                <h3>Trade Checker</h3>
+                <a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open AMVGG</a>
             </div>
-            </main>
+        </main>
 
         <button class="fab" onclick="app.openModal()">+</button>
     </div>
@@ -57,10 +50,10 @@
     <div id="modal-overlay" class="overlay hidden">
         <div class="auth-card">
             <h2>New Tracker</h2>
-            <input type="text" id="track-name" placeholder="Tracker Name" class="neal-input">
+            <input type="text" id="track-name" placeholder="Name (Required)" class="neal-input" required>
             <select id="track-type" class="neal-input">
-                <option value="bool">Checkmark (Yes/No)</option>
-                <option value="text">Text/Number Entry</option>
+                <option value="bool">Checkmark</option>
+                <option value="text">Value (Grams/ML/Count)</option>
             </select>
             <div class="auth-buttons">
                 <button onclick="app.createTracker()" class="neal-btn primary">Create</button>
