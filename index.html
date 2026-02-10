@@ -12,7 +12,7 @@
 
     <div id="auth-overlay" class="overlay">
         <div class="auth-card">
-            <h1>Welcome</h1>
+            <h1>Welcome.</h1>
             <input type="email" id="user" placeholder="Email" class="neal-input">
             <input type="password" id="pass" placeholder="Password" class="neal-input">
             <div class="auth-buttons">
@@ -31,16 +31,21 @@
         </header>
 
         <section class="workspace-bar">
-            <input type="text" id="join-work-id" placeholder="Workspace ID" class="neal-input small">
+            <input type="text" id="join-work-id" placeholder="Enter ID to Join" class="neal-input small">
             <button onclick="app.joinWorkspace()" class="neal-btn">Join</button>
-            <button onclick="app.createNewWorkspace()" class="neal-btn primary">✨ New</button>
+
+            <select id="workspace-dropdown" class="neal-input" style="width: auto;" onchange="app.switchWorkspace(this.value)">
+                <option value="">🏠 Private Space</option>
+            </select>
+
+            <button onclick="app.createNewWorkspace()" class="neal-btn primary">✨ New Space</button>
             <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
         </section>
 
         <main id="module-container" class="grid-container">
             <div class="module portal-card">
                 <h3>Trade Checker</h3>
-                <a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open AMVGG</a>
+                <a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open AMVGG ↗</a>
             </div>
         </main>
 
@@ -50,10 +55,10 @@
     <div id="modal-overlay" class="overlay hidden">
         <div class="auth-card">
             <h2>New Tracker</h2>
-            <input type="text" id="track-name" placeholder="Name (Required)" class="neal-input" required>
+            <input type="text" id="track-name" placeholder="Name (Required)" class="neal-input">
             <select id="track-type" class="neal-input">
-                <option value="bool">Checkmark</option>
-                <option value="text">Value (Grams/ML/Count)</option>
+                <option value="bool">Checkmark (Done/Not Done)</option>
+                <option value="text">Value Entry (Grams, Laps, etc.)</option>
             </select>
             <div class="auth-buttons">
                 <button onclick="app.createTracker()" class="neal-btn primary">Create</button>
