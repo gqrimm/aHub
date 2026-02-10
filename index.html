@@ -10,15 +10,24 @@
 </head>
 <body>
 
-    <div id="auth-overlay">
-        <div class="login-card">
-            <h1>Welcome.</h1>
-            <p>Please enter your credentials to access the data store.</p>
-            <input type="text" id="user" class="neal-input" placeholder="Username">
-            <input type="password" id="pass" class="neal-input" placeholder="Password">
-            <button class="neal-btn" onclick="app.login()">Enter Site</button>
+<div id="auth-overlay">
+    <div class="login-card">
+        <h1 id="auth-title">Welcome.</h1>
+        <input type="email" id="user" class="neal-input" placeholder="Email">
+        <input type="password" id="pass" class="neal-input" placeholder="Password">
+        
+        <div id="auth-actions">
+            <button class="neal-btn" onclick="app.login()">Login</button>
+            <button class="neal-btn" style="background:#fff; color:#000" onclick="app.register()">Sign Up</button>
+        </div>
+
+        <div id="workspace-section" class="hidden" style="margin-top:20px; border-top: 2px solid #000; padding-top:20px;">
+            <p>Join a Shared Space:</p>
+            <input type="text" id="join-work-id" class="neal-input" placeholder="Enter Workspace ID">
+            <button class="neal-btn" onclick="app.joinWorkspace()">Join Space</button>
         </div>
     </div>
+</div>
 
     <div id="main-content" class="hidden">
         <header>
