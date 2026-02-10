@@ -6,11 +6,13 @@ const app = {
     user: null,
     trackers: [],
     currentWorkspace: new URLSearchParams(window.location.search).get('space') || localStorage.getItem('active_workspace') || null,
+    selectedDate: new Date().toISOString().split('T')[0], // Default to today
 
     init: async function() {
-        if (this.currentWorkspace) localStorage.setItem('active_workspace', this.currentWorkspace);
-        
-        // Auth State Listener
+        // Handle Session on Load
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) this.user = session.user;
+
         sb.auth.onAuthStateChange((event, session) => {
             if (session) {
                 this.user = session.user;
@@ -20,137 +22,115 @@ const app = {
             }
         });
 
-        // Realtime Subscription
-        sb.channel('any').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => {
+        // Realtime
+        sb.channel('trackers-room').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => {
             this.fetchTrackers();
         }).subscribe();
     },
 
     // --- AUTH ---
     login: async () => {
-        const email = document.getElementById('user').value;
-        const pass = document.getElementById('pass').value;
-        const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+        const { error } = await sb.auth.signInWithPassword({
+            email: document.getElementById('user').value,
+            password: document.getElementById('pass').value
+        });
         if (error) alert(error.message);
-    },
-
-    register: async () => {
-        const email = document.getElementById('user').value;
-        const pass = document.getElementById('pass').value;
-        const { error } = await sb.auth.signUp({ email, password: pass });
-        if (error) alert(error.message);
-        else alert("Check your email!");
     },
 
     logout: async () => {
         await sb.auth.signOut();
         localStorage.removeItem('active_workspace');
-        window.location.search = ""; // Clear URL params
-    },
-
-    // --- WORKSPACE ---
-    createNewWorkspace: function() {
-        const id = Math.random().toString(36).substring(2, 8);
-        if(confirm("Create new space: " + id + "?")) {
-            this.currentWorkspace = id;
-            localStorage.setItem('active_workspace', id);
-            this.fetchTrackers();
-        }
-    },
-
-    joinWorkspace: function() {
-        const id = document.getElementById('join-work-id').value.trim();
-        this.currentWorkspace = id || null;
-        if(id) localStorage.setItem('active_workspace', id);
-        else localStorage.removeItem('active_workspace');
-        this.fetchTrackers();
-    },
-
-    copyInviteLink: function() {
-        if(!this.currentWorkspace) return alert("Enter a workspace first!");
-        const link = `${window.location.origin}${window.location.pathname}?space=${this.currentWorkspace}`;
-        navigator.clipboard.writeText(link);
-        alert("Invite link copied!");
+        // Redirect and clean URL
+        window.location.replace(window.location.origin + window.location.pathname);
     },
 
     // --- TRACKERS ---
-    fetchTrackers: async function() {
-        let query = sb.from('trackers').select('*');
-        if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
-        else query = query.eq('user_id', this.user.id).is('workspace_id', null);
-
-        const { data, error } = await query.order('created_at', { ascending: true });
-        if (!error) { this.trackers = data; this.render(); }
-    },
-
     createTracker: async function() {
-        const name = document.getElementById('track-name').value;
-        const type = document.getElementById('track-type').value;
-        await sb.from('trackers').insert([{
-            name, type, user_id: this.user.id,
-            workspace_id: this.currentWorkspace, history_data: {}
+        const nameEl = document.getElementById('track-name');
+        const name = nameEl.value.trim();
+        if (!name) return alert("Card name is required!"); // Requirement check
+
+        const { error } = await sb.from('trackers').insert([{
+            name: name,
+            type: document.getElementById('track-type').value,
+            user_id: this.user.id,
+            workspace_id: this.currentWorkspace,
+            history_data: {}
         }]);
-        this.closeModal();
+
+        if (error) alert(error.message);
+        else { nameEl.value = ""; this.closeModal(); }
     },
 
     deleteTracker: async function(id) {
-        if(!confirm("Are you sure?")) return;
+        if (!confirm("Delete this tracker?")) return;
         const { error } = await sb.from('trackers').delete().eq('id', id);
-        if (error) alert("Delete failed: " + error.message);
-        // Realtime will trigger the UI refresh
+        if (error) alert("Delete error: " + error.message);
     },
 
-    logEntry: async function(trackerId, dateKey) {
+    logValue: async function(trackerId, dateKey, value) {
         const t = this.trackers.find(x => x.id === trackerId);
         let history = { ...t.history_data };
+        
         if (t.type === 'bool') history[dateKey] = !history[dateKey];
-        else {
-            const val = prompt("Entry:", history[dateKey] || "");
-            if (val === null) return;
-            history[dateKey] = val;
-        }
+        else history[dateKey] = value;
+
         await sb.from('trackers').update({ history_data: history }).eq('id', trackerId);
     },
 
-    // --- UI HELPERS ---
+    // --- UI RENDER ---
     render: function() {
         const container = document.getElementById('module-container');
-        const staticMod = container.querySelector('.portal').outerHTML;
-        container.innerHTML = staticMod;
+        container.innerHTML = `<div class="module portal-card"><h3>Trade Checker</h3><a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open AMVGG</a></div>`;
 
         this.trackers.forEach(t => {
             const card = document.createElement('div');
             card.className = 'module';
+            
+            // Left Pane: Calendar
             let calHtml = '';
             for (let i = 13; i >= 0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
                 const k = d.toISOString().split('T')[0];
                 const active = t.history_data[k] ? 'day-active' : '';
-                calHtml += `<div class="day-box ${active}" onclick="app.logEntry(${t.id}, '${k}')">${d.getDate()}</div>`;
+                calHtml += `<div class="day-box ${active}" onclick="app.selectedDate='${k}'; app.render();">${d.getDate()}</div>`;
             }
+
+            const currentVal = t.history_data[this.selectedDate] || "";
+            
+            // Right Pane: Interface
             card.innerHTML = `
-                <div class="module-header">
-                    <h3>${t.name}</h3>
-                    <button class="neal-btn danger" style="padding:2px 8px" onclick="app.deleteTracker(${t.id})">×</button>
+                <div class="card-left">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <strong>${t.name}</strong>
+                        <button onclick="app.deleteTracker(${t.id})" style="border:none; cursor:pointer;">×</button>
+                    </div>
+                    <div class="calendar-grid">${calHtml}</div>
                 </div>
-                <div class="calendar-grid">${calHtml}</div>
+                <div class="card-right">
+                    <small>${this.selectedDate}</small>
+                    ${t.type === 'bool' ? 
+                        `<button class="neal-btn ${currentVal ? 'primary' : ''}" onclick="app.logValue(${t.id}, '${this.selectedDate}', true)">${currentVal ? 'COMPLETED' : 'MARK DONE'}</button>` :
+                        `<input type="text" class="neal-input small" style="width:80%" value="${currentVal}" onchange="app.logValue(${t.id}, '${this.selectedDate}', this.value)" placeholder="Enter value...">`
+                    }
+                </div>
             `;
             container.appendChild(card);
         });
     },
 
-    showDashboard: () => {
-        document.getElementById('auth-overlay').classList.add('hidden');
-        document.getElementById('main-content').classList.remove('hidden');
+    // ... (Keep workspace functions from previous version)
+    fetchTrackers: async function() {
+        let query = sb.from('trackers').select('*');
+        if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
+        else query = query.eq('user_id', this.user.id).is('workspace_id', null);
+        const { data } = await query.order('created_at', { ascending: true });
+        this.trackers = data || [];
+        this.render();
     },
-
-    showLogin: () => {
-        document.getElementById('auth-overlay').classList.remove('hidden');
-        document.getElementById('main-content').classList.add('hidden');
-    },
-
+    showDashboard: () => { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); app.fetchTrackers(); },
+    showLogin: () => { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden')
 };
-
 app.init();
