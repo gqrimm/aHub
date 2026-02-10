@@ -5,11 +5,24 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = {
     user: null,
     trackers: [],
-    // Workspace is stored in LocalStorage so it remembers which room you're in
-    currentWorkspace: localStorage.getItem('active_workspace') || null,
+    // Priority: 1. URL (?space=id)  2. LocalStorage  3. Null
+    currentWorkspace: new URLSearchParams(window.location.search).get('space') || 
+                      localStorage.getItem('active_workspace') || null,
 
     init: async function() {
-        // 1. Listen for Auth changes (This handles "remember me" automatically)
+        // Save workspace to storage if it came from the URL
+        if (new URLSearchParams(window.location.search).get('space')) {
+            localStorage.setItem('active_workspace', this.currentWorkspace);
+        }
+
+        // Handle Session Persistence
+        const { data: { session } } = await sb.auth.getSession();
+        if (session) {
+            this.user = session.user;
+            this.showDashboard();
+        }
+
+        // Listen for Auth Changes (Login/Logout)
         sb.auth.onAuthStateChange((event, session) => {
             if (session) {
                 this.user = session.user;
@@ -18,52 +31,50 @@ const app = {
                 this.showLogin();
             }
         });
+
+        // LIVE UPDATE: Refresh UI when anyone in the workspace makes a change
+        sb.channel('db-changes')
+          .on('postgres_changes', 
+              { event: '*', schema: 'public', table: 'trackers' }, 
+              () => this.fetchTrackers())
+          .subscribe();
     },
 
-    // --- AUTH ACTIONS ---
+    // --- AUTH ---
+    login: async function() {
+        const email = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) alert(error.message);
+    },
+
     register: async function() {
         const email = document.getElementById('user').value;
         const password = document.getElementById('pass').value;
         const { error } = await sb.auth.signUp({ email, password });
         if (error) alert(error.message);
-        else alert("Check your email for a confirmation link!");
+        else alert("Signup successful! Please check your email to confirm.");
     },
 
-    login: async function() {
-        const email = document.getElementById('user').value;
-        const password = document.getElementById('pass').value;
-        const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) alert("Login error: " + error.message);
+    // --- WORKSPACE ---
+    copyInviteLink: function() {
+        if (!this.currentWorkspace) return alert("Join a workspace first!");
+        const url = `${window.location.origin}${window.location.pathname}?space=${this.currentWorkspace}`;
+        navigator.clipboard.writeText(url);
+        alert("Invite link copied to clipboard!");
     },
 
-    logout: async function() {
-        await sb.auth.signOut();
-        localStorage.removeItem('active_workspace');
-        location.reload();
-    },
-
-    // --- WORKSPACE ACTIONS ---
     joinWorkspace: function() {
         const id = document.getElementById('join-work-id').value.trim();
-        if (id === "") {
-            this.currentWorkspace = null;
-            localStorage.removeItem('active_workspace');
-            alert("Switched to Private Space");
-        } else {
-            this.currentWorkspace = id;
-            localStorage.setItem('active_workspace', id);
-            alert("Joined Workspace: " + id);
-        }
+        this.currentWorkspace = id || null;
+        if (id) localStorage.setItem('active_workspace', id);
+        else localStorage.removeItem('active_workspace');
         this.fetchTrackers();
     },
 
-    // --- DATA ACTIONS ---
+    // --- TRACKERS ---
     fetchTrackers: async function() {
         let query = sb.from('trackers').select('*');
-
-        // WORKSPACE LOGIC:
-        // If in workspace: show items where workspace_id matches
-        // If private: show items where user_id matches AND workspace_id is null
         if (this.currentWorkspace) {
             query = query.eq('workspace_id', this.currentWorkspace);
         } else {
@@ -71,9 +82,7 @@ const app = {
         }
 
         const { data, error } = await query.order('created_at', { ascending: true });
-        
-        if (error) console.error(error);
-        else {
+        if (!error) {
             this.trackers = data;
             this.render();
         }
@@ -82,95 +91,62 @@ const app = {
     createTracker: async function() {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
-        if (!name) return;
-
-        const { error } = await sb.from('trackers').insert([{
-            name: name,
-            type: type,
-            user_id: this.user.id,
-            workspace_id: this.currentWorkspace, // Will be null if in private mode
-            history_data: {}
+        await sb.from('trackers').insert([{
+            name, type, user_id: this.user.id, 
+            workspace_id: this.currentWorkspace, history_data: {}
         }]);
-
-        if (error) alert(error.message);
-        else {
-            this.closeModal();
-            this.fetchTrackers();
-        }
+        this.closeModal();
+        this.fetchTrackers();
     },
 
     logEntry: async function(trackerId, dateKey) {
         const tracker = this.trackers.find(t => t.id === trackerId);
         let history = { ...tracker.history_data };
 
-        if (tracker.type === 'bool') {
-            history[dateKey] = !history[dateKey];
-        } else {
-            const val = prompt(`Value for ${tracker.name}:`, history[dateKey] || "");
+        if (tracker.type === 'bool') history[dateKey] = !history[dateKey];
+        else {
+            const val = prompt(`Value:`, history[dateKey] || "");
             if (val === null) return;
             history[dateKey] = val;
         }
 
         await sb.from('trackers').update({ history_data: history }).eq('id', trackerId);
-        this.fetchTrackers();
+        // fetchTrackers is called automatically by the Realtime listener!
     },
 
-    // --- UI CONTROLS ---
+    // --- UI ---
     showDashboard: function() {
         document.getElementById('auth-overlay').classList.add('hidden');
         document.getElementById('main-content').classList.remove('hidden');
-        // Update Workspace Input UI to show current room
         document.getElementById('join-work-id').value = this.currentWorkspace || "";
         this.fetchTrackers();
     },
 
-    showLogin: function() {
-        document.getElementById('auth-overlay').classList.remove('hidden');
-        document.getElementById('main-content').classList.add('hidden');
-    },
-
+    showLogin: () => document.getElementById('auth-overlay').classList.remove('hidden'),
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden'),
 
     render: function() {
         const container = document.getElementById('module-container');
-        // Keep the AMVGG portal, remove everything else
         const staticMod = container.firstElementChild.outerHTML;
         container.innerHTML = staticMod;
 
         this.trackers.forEach(t => {
             const card = document.createElement('div');
             card.className = 'module';
-            
             let calHtml = '';
             for (let i = 13; i >= 0; i--) {
-                const d = new Date();
-                d.setDate(d.getDate() - i);
+                const d = new Date(); d.setDate(d.getDate() - i);
                 const k = d.toISOString().split('T')[0];
                 const val = t.history_data[k];
-                const active = val ? 'day-active' : '';
-                const label = val ? (t.type === 'bool' ? '✓' : val) : d.getDate();
-                calHtml += `<div class="day-box ${active}" onclick="app.logEntry(${t.id}, '${k}')">${label}</div>`;
+                calHtml += `<div class="day-box ${val ? 'day-active' : ''}" 
+                             onclick="app.logEntry(${t.id}, '${k}')">
+                             ${val ? (t.type === 'bool' ? '✓' : val) : d.getDate()}
+                             </div>`;
             }
-
-            card.innerHTML = `
-                <div class="module-header">
-                    <h3>${t.name} ${t.workspace_id ? '👥' : '🔒'}</h3>
-                    <button class="neal-btn" style="background:red; padding:2px 8px" onclick="app.deleteTracker(${t.id})">×</button>
-                </div>
-                <div class="calendar-grid">${calHtml}</div>
-            `;
+            card.innerHTML = `<div class="module-header"><h3>${t.name}</h3></div><div class="calendar-grid">${calHtml}</div>`;
             container.appendChild(card);
         });
-    },
-
-    deleteTracker: async function(id) {
-        if (confirm("Delete this?")) {
-            await sb.from('trackers').delete().eq('id', id);
-            this.fetchTrackers();
-        }
     }
 };
-
-// Fire it up
 app.init();
