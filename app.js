@@ -2,8 +2,8 @@
  * CONFIGURATION
  * Get these from your Supabase Project Settings > API
  */
-const SUPABASE_URL = 'https://your-project-id.supabase.co';
-const SUPABASE_KEY = 'your-public-anon-key';
+const SUPABASE_URL = 'https://ynnqidfodgravvhxhbuw.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ziIy4oGXycJNYeZRKyqNKg_GwnJrz6f';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const app = {
