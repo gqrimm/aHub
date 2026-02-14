@@ -18,13 +18,15 @@ const app = {
         }
 
         // 2. Single Auth Listener for EVERYTHING
-        sb.auth.onAuthStateChange(async (event, session) => {
+       sb.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth Event:", event); // Debugging line
+            
             if (event === "PASSWORD_RECOVERY") {
-                const newPassword = prompt("Enter your new password:");
+                const newPassword = prompt("Type your new password:");
                 if (newPassword) {
                     const { error } = await sb.auth.updateUser({ password: newPassword });
                     if (error) alert("Error: " + error.message);
-                    else alert("Password updated! Logging you in...");
+                    else alert("Password updated successfully! You can now log in.");
                 }
             }
 
@@ -32,7 +34,6 @@ const app = {
                 this.user = session.user;
                 this.showDashboard();
             } else {
-                this.user = null;
                 this.showLogin();
             }
         });
@@ -60,13 +61,23 @@ const app = {
 
     // --- ADDED THIS BACK IN ---
     forgotPassword: async function() {
-        const email = document.getElementById('user').value;
-        if (!email) return alert("Please enter your email address first.");
+        const emailInput = document.getElementById('user');
+        const email = emailInput ? emailInput.value : "";
+
+        if (!email) {
+            alert("Please type your email address in the email field first!");
+            return;
+        }
+
         const { error } = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.href, // Brings them back to this exact page
+            redirectTo: window.location.origin, // Sends them back to your homepage
         });
-        if (error) alert(error.message);
-        else alert("Password reset link sent to your email!");
+
+        if (error) {
+            alert("Error: " + error.message);
+        } else {
+            alert("Check your inbox! We sent a reset link to: " + email);
+        }
     },
 
     logout: async () => { 
