@@ -110,23 +110,50 @@ const app = {
     makeMembershipPermanent: async function(spaceId) {
         if (!this.user || !spaceId) return;
 
-        // Check if they already have this workspace in their dropdown
         const { data: existing } = await sb.from('user_workspaces')
             .select('*')
             .eq('user_id', this.user.id)
             .eq('workspace_id', spaceId);
 
         if (!existing || existing.length === 0) {
-            // This is the part that actually saves it to their account
+            // 1. Fetch the actual name from the trackers table
+            const { data: trackerData } = await sb.from('trackers')
+                .select('workspace_name')
+                .eq('workspace_id', spaceId)
+                .limit(1)
+                .single();
+
+            // 2. Fallback to "Shared Space" if the workspace is empty/new
+            const actualName = trackerData?.workspace_name || "Shared Space";
+
+            // 3. Insert the membership with the REAL name
             await sb.from('user_workspaces').insert([
                 { 
                     user_id: this.user.id, 
                     workspace_id: spaceId, 
-                    workspace_name: "Joined Space" 
+                    workspace_name: actualName 
                 }
             ]);
-            // Refresh the dropdown immediately so they see the new name
+            
             await this.fetchWorkspaces();
+        }
+    },
+
+    syncWorkspaceName: async function() {
+        if(!this.currentWorkspace) return;
+        
+        const { data } = await sb.from('trackers')
+            .select('workspace_name')
+            .eq('workspace_id', this.currentWorkspace)
+            .limit(1)
+            .single();
+            
+        if(data) {
+            await sb.from('user_workspaces')
+                .update({ workspace_name: data.workspace_name })
+                .eq('user_id', this.user.id)
+                .eq('workspace_id', this.currentWorkspace);
+            this.fetchWorkspaces();
         }
     },
 
