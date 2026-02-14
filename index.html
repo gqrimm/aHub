@@ -41,6 +41,11 @@
                     <option value="">🏠 Private Space</option>
                 </select>
                 <button onclick="app.createNewWorkspace()" class="neal-btn primary">+ New Space</button>
+                
+                <div id="ws-manage-controls" class="hidden">
+                    <span class="edit-text" onclick="app.renameWorkspace()">Rename</span>
+                    <span class="danger-text" onclick="app.deleteWorkspace()">Delete Space</span>
+                </div>
             </div>
 
             <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>

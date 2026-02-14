@@ -33,7 +33,7 @@ const app = {
     createNewWorkspace: async function() {
         const name = prompt("Enter Space Name:");
         if (!name) return;
-        const spaceId = Math.random().toString(36).substring(2, 9); // Random ID
+        const spaceId = Math.random().toString(36).substring(2, 9);
         
         const { error } = await sb.from('user_workspaces').insert([
             { user_id: this.user.id, workspace_id: spaceId, workspace_name: name }
@@ -46,11 +46,45 @@ const app = {
         }
     },
 
+    renameWorkspace: async function() {
+        if (!this.currentWorkspace) return;
+        const newName = prompt("Enter new space name:");
+        if (!newName) return;
+
+        const { error } = await sb.from('user_workspaces')
+            .update({ workspace_name: newName })
+            .eq('workspace_id', this.currentWorkspace)
+            .eq('user_id', this.user.id);
+
+        if (error) alert(error.message);
+        else this.fetchWorkspaces();
+    },
+
+    deleteWorkspace: async function() {
+        if (!this.currentWorkspace) return;
+        if (!confirm("Remove this space from your list? (This won't delete data for other members)")) return;
+
+        const { error } = await sb.from('user_workspaces')
+            .delete()
+            .eq('workspace_id', this.currentWorkspace)
+            .eq('user_id', this.user.id);
+
+        if (error) alert(error.message);
+        else this.switchWorkspace(null); // Boot back to private
+    },
+
     fetchWorkspaces: async function() {
         const { data } = await sb.from('user_workspaces').select('*').eq('user_id', this.user.id);
         this.workspaces = data || [];
         const dropdown = document.getElementById('workspace-dropdown');
+        const manageBox = document.getElementById('ws-manage-controls');
+        
         dropdown.innerHTML = '<option value="">🏠 Private Space</option>';
+        
+        // Hide/Show management tools based on current space
+        if (this.currentWorkspace && manageBox) manageBox.classList.remove('hidden');
+        else if (manageBox) manageBox.classList.add('hidden');
+
         this.workspaces.forEach(ws => {
             const opt = document.createElement('option');
             opt.value = ws.workspace_id;
@@ -75,7 +109,6 @@ const app = {
         if (id) localStorage.setItem('active_workspace', id);
         else localStorage.removeItem('active_workspace');
         
-        // Update URL without reloading
         const url = new URL(window.location);
         id ? url.searchParams.set('space', id) : url.searchParams.delete('space');
         window.history.pushState({}, '', url);
@@ -85,7 +118,7 @@ const app = {
     },
 
     copyInviteLink: function() {
-        if (!this.currentWorkspace) return alert("You are in a Private Space. Create a shared Space first!");
+        if (!this.currentWorkspace) return alert("You are in a Private Space.");
         const link = window.location.origin + window.location.pathname + '?space=' + this.currentWorkspace;
         navigator.clipboard.writeText(link);
         alert("Invite link copied!");
@@ -112,8 +145,6 @@ const app = {
         this.closeModal();
     },
 
-    // ... (rest of rendering, login, initCanvas, and deleteTracker logic from previous step)
-    
     login: async function() {
         const email = document.getElementById('user').value;
         const password = document.getElementById('pass').value;
@@ -161,7 +192,7 @@ const app = {
             const val = t.history_data[this.selectedDate] || "";
             const input = t.type === 'bool' ? 
                 `<button class="neal-btn ${val ? 'primary' : ''}" style="width:100%; margin-top:10px;" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` :
-                `<input type="text" class="neal-input" style="margin-top:10px;" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
+                `<input type="text" class="neal-input" style="width:100%; margin-top:10px;" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
             return `<small>${this.selectedDate}</small>${cal}${input}`;
         }
         if (t.type === 'pure-text') return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${t.history_data.note || ''}</textarea>`;
@@ -177,6 +208,7 @@ const app = {
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
+        if(!canvas) return;
         const ctx = canvas.getContext('2d');
         if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img,0,0); img.src = t.history_data.img; }
         let draw = false;
@@ -188,7 +220,8 @@ const app = {
     clearCanvas: async function(id) {
         const canvas = document.getElementById(`canvas-${id}`);
         canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
-        await sb.from('trackers').update({ history_data: { img: null } }).eq('id', id);
+        const t = this.trackers.find(x => x.id === id);
+        await sb.from('trackers').update({ history_data: { ...t.history_data, img: null } }).eq('id', id);
     },
 
     deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },

@@ -168,3 +168,33 @@ body {
     cursor: pointer;
     box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
 }
+
+/* Card Resizing */
+.module {
+    /* ... (previous styles) ... */
+    resize: both; /* Allows manual resizing */
+    overflow: auto; /* Required for resize to work */
+    min-width: 300px;
+    min-height: 250px;
+}
+
+/* Workspace Management UI */
+.workspace-bar {
+    border-bottom: 2px solid #000;
+}
+
+.danger-text {
+    color: #ff5757;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-left: 10px;
+}
+
+.edit-text {
+    color: #666;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-left: 10px;
+    text-decoration: underline;
+}
