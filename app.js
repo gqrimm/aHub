@@ -240,16 +240,38 @@ const app = {
         this.fetchTrackers();
     },
 
-    editCode: async function(id) {
+    editCode: function(id) {
         const t = this.trackers.find(x => x.id === id);
         const currentCode = (t.history_data && t.history_data.code) ? t.history_data.code : "";
-        const newCode = prompt("Paste your HTML/CSS code here:", currentCode);
-        
-        if (newCode !== null) {
+
+        // Create a temporary overlay for editing
+        const editorDiv = document.createElement('div');
+        editorDiv.className = 'overlay';
+        editorDiv.innerHTML = `
+            <div class="auth-card" style="max-width: 80%; width: 800px; height: 80%;">
+                <h3 style="margin-top:0">CODE EDITOR</h3>
+                <textarea id="code-editor-area" style="width:100%; height:70%; font-family:monospace; padding:10px; border:2px solid #000; resize:none;">${currentCode}</textarea>
+                <div style="margin-top:20px; display:flex; gap:10px; justify-content: flex-end;">
+                    <button class="neal-btn" id="close-editor">Cancel</button>
+                    <button class="neal-btn primary" id="save-code">Save & Push</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(editorDiv);
+
+        // Save Logic
+        document.getElementById('save-code').onclick = async () => {
+            const newCode = document.getElementById('code-editor-area').value;
             let history = { ...t.history_data, code: newCode };
             await sb.from('trackers').update({ history_data: history }).eq('id', id);
+            document.body.removeChild(editorDiv);
             this.fetchTrackers();
-        }
+        };
+
+        // Close Logic
+        document.getElementById('close-editor').onclick = () => {
+            document.body.removeChild(editorDiv);
+        };
     },
 
     initCanvas: function(t) {
