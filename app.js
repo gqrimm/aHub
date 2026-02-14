@@ -197,6 +197,15 @@ const app = {
         }
         if (t.type === 'pure-text') return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${t.history_data.note || ''}</textarea>`;
         if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
+        if (t.type === 'code') {
+    const code = t.history_data.code || "<h1>Hello!</h1><p>Edit me...</p>";
+    return `
+        <div style="flex-grow:1; display:flex; flex-direction:column; gap:10px;">
+            <iframe id="preview-${t.id}" srcdoc="${code.replace(/"/g, '&quot;')}" style="border:2px solid #000; background:#fff; flex-grow:1; width:100%;"></iframe>
+            <button class="neal-btn" onclick="app.editCode(${t.id})" style="font-size:10px;">Edit Source</button>
+        </div>
+    `;
+}
     },
 
     logValue: async function(id, key, val) {
@@ -206,6 +215,18 @@ const app = {
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
         this.fetchTrackers();
     },
+
+    editCode: async function(id) {
+    const t = this.trackers.find(x => x.id === id);
+    const currentCode = t.history_data.code || "";
+    const newCode = prompt("Paste your HTML/CSS code here:", currentCode);
+    
+    if (newCode !== null) {
+        let history = { ...t.history_data, code: newCode };
+        await sb.from('trackers').update({ history_data: history }).eq('id', id);
+        this.fetchTrackers();
+    }
+},
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
