@@ -62,7 +62,7 @@ const app = {
 
     deleteWorkspace: async function() {
         if (!this.currentWorkspace) return;
-        if (!confirm("Remove this space from your list? (This won't delete data for other members)")) return;
+        if (!confirm("Remove this space from your list?")) return;
 
         const { error } = await sb.from('user_workspaces')
             .delete()
@@ -70,7 +70,7 @@ const app = {
             .eq('user_id', this.user.id);
 
         if (error) alert(error.message);
-        else this.switchWorkspace(null); // Boot back to private
+        else this.switchWorkspace(null); 
     },
 
     fetchWorkspaces: async function() {
@@ -81,9 +81,8 @@ const app = {
         
         dropdown.innerHTML = '<option value="">🏠 Private Space</option>';
         
-        // Hide/Show management tools based on current space
-        if (this.currentWorkspace && manageBox) manageBox.classList.remove('hidden');
-        else if (manageBox) manageBox.classList.add('hidden');
+        if (this.currentWorkspace) manageBox?.classList.remove('hidden');
+        else manageBox?.classList.add('hidden');
 
         this.workspaces.forEach(ws => {
             const opt = document.createElement('option');
@@ -100,7 +99,7 @@ const app = {
         const { error } = await sb.from('user_workspaces').insert([
             { user_id: this.user.id, workspace_id: id, workspace_name: name || id }
         ]);
-        if (error) alert("Already joined or error: " + error.message);
+        if (error) alert("Joined!");
         this.switchWorkspace(id);
     },
 
@@ -118,13 +117,12 @@ const app = {
     },
 
     copyInviteLink: function() {
-        if (!this.currentWorkspace) return alert("You are in a Private Space.");
+        if (!this.currentWorkspace) return alert("Switch to a shared Space first!");
         const link = window.location.origin + window.location.pathname + '?space=' + this.currentWorkspace;
         navigator.clipboard.writeText(link);
         alert("Invite link copied!");
     },
 
-    // --- TRACKER LOGIC ---
     fetchTrackers: async function() {
         if (!this.user) return;
         let query = sb.from('trackers').select('*');
@@ -139,10 +137,12 @@ const app = {
     createTracker: async function() {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
+        if(!name) return alert("Enter a name");
         await sb.from('trackers').insert([{ 
             name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: {} 
         }]);
         this.closeModal();
+        this.fetchTrackers(); // Refresh immediately
     },
 
     login: async function() {
@@ -196,21 +196,26 @@ const app = {
             return `<small>${this.selectedDate}</small>${cal}${input}`;
         }
         if (t.type === 'pure-text') return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${t.history_data.note || ''}</textarea>`;
-        if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas" width="310" height="150"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
+        if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
     },
 
     logValue: async function(id, key, val) {
         const t = this.trackers.find(x => x.id === id);
         let history = { ...t.history_data };
-        t.type === 'bool' ? history[key] = !history[key] : history[key] = val;
+        t.type === 'bool' ? (history[key] = !history[key]) : (history[key] = val);
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
+        this.fetchTrackers();
     },
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
         if(!canvas) return;
         const ctx = canvas.getContext('2d');
-        if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img,0,0); img.src = t.history_data.img; }
+        // Set internal resolution to match display size
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+        if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img,0,0, canvas.width, canvas.height); img.src = t.history_data.img; }
         let draw = false;
         canvas.onmousedown = (e) => { draw = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if(draw) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };

@@ -1,79 +1,87 @@
+/* --- CONFIG & RESET --- */
 :root {
-    --bg: #f8f9fa;
+    --bg: #f0f0f0;
     --sticky-color: #fff9c4;
-    --border-color: #000;
-    --text-main: #333;
+    --accent: #000000;
+    --danger: #ff5757;
+    --border-width: 2px;
+    --shadow: 6px 6px 0px rgba(0,0,0,1);
 }
 
-* { box-sizing: border-box; }
+* { 
+    box-sizing: border-box; 
+    transition: transform 0.1s, box-shadow 0.1s;
+}
 
 body { 
-    font-family: 'Inter', sans-serif; 
-    background-color: #f0f0f0;
-    background-image: radial-gradient(#d1d1d1 1px, transparent 1px);
-    background-size: 20px 20px;
+    font-family: 'Inter', system-ui, sans-serif; 
+    background-color: var(--bg);
+    background-image: radial-gradient(#d1d1d1 1.5px, transparent 1.5px);
+    background-size: 25px 25px;
     margin: 0; 
-    color: var(--text-main);
+    color: #1a1a1a;
 }
 
 .hidden { display: none !important; }
 
-.overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.auth-card {
-    background: var(--sticky-color);
-    padding: 35px;
-    border-radius: 16px;
-    border: 3px solid #000;
-    box-shadow: 10px 10px 0px rgba(0,0,0,0.1);
-    width: 100%;
-    max-width: 400px;
-    text-align: center;
-}
-
+/* --- LAYOUT --- */
 .main-header { 
     display: flex; 
     justify-content: space-between; 
     align-items: center;
     padding: 15px 30px; 
     background: white; 
-    border-bottom: 2px solid #000; 
+    border-bottom: var(--border-width) solid var(--accent); 
+}
+
+.workspace-bar {
+    padding: 20px 30px;
+    background: #fff;
+    border-bottom: var(--border-width) solid var(--accent);
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 25px;
+    gap: 30px;
     padding: 30px;
+    align-items: start;
 }
 
+/* --- THE MODULE (THE STICKY NOTE) --- */
 .module {
     background: var(--sticky-color);
-    border-radius: 12px;
-    border: 1px solid rgba(0,0,0,0.1);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    border: var(--border-width) solid var(--accent);
+    border-radius: 4px; /* Sharper edges for neubrutalism */
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    min-height: 280px;
+    
+    /* RESIZING LOGIC */
+    resize: both; 
+    overflow: auto; /* Required for native resize handle */
+    min-height: 300px;
+    min-width: 320px;
+    position: relative;
+}
+
+.module:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 8px 8px 0px rgba(0,0,0,1);
 }
 
 .card-header {
     display: flex;
     justify-content: space-between;
-    padding: 15px 20px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
-    font-weight: 700;
+    padding: 15px;
+    border-bottom: var(--border-width) solid var(--accent);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .card-body {
@@ -81,40 +89,64 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
+/* --- INPUTS & BUTTONS --- */
 .neal-input {
-    border: 2px solid #000;
-    border-radius: 8px;
-    padding: 10px;
+    border: var(--border-width) solid var(--accent);
+    border-radius: 4px;
+    padding: 12px;
     background: white;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
+    font-weight: 600;
+    outline: none;
 }
 
 .neal-btn {
-    border: 2px solid #000;
-    border-radius: 8px;
-    padding: 8px 16px;
+    border: var(--border-width) solid var(--accent);
+    border-radius: 4px;
+    padding: 10px 20px;
     background: #fff;
-    font-weight: 700;
+    font-weight: 800;
     cursor: pointer;
-    box-shadow: 3px 3px 0px #000;
-    transition: all 0.1s;
+    box-shadow: 4px 4px 0px var(--accent);
+    text-transform: uppercase;
+    font-size: 0.8rem;
 }
 
 .neal-btn:active {
-    box-shadow: 0px 0px 0px #000;
-    transform: translate(3px, 3px);
+    box-shadow: 0px 0px 0px var(--accent);
+    transform: translate(4px, 4px);
 }
 
-.neal-btn.primary { background: #000; color: #fff; }
+.neal-btn.primary {
+    background: var(--accent);
+    color: #fff;
+}
 
-.auth-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
+/* --- COMPONENTS --- */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
     margin-top: 10px;
+}
+
+.day-box {
+    aspect-ratio: 1;
+    border: 1px solid var(--accent);
+    background: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.day-active { 
+    background: var(--accent) !important; 
+    color: #fff; 
 }
 
 .note-area {
@@ -124,77 +156,81 @@ body {
     background: transparent;
     resize: none;
     font-size: 1.1rem;
+    font-family: inherit;
     outline: none;
+    line-height: 1.5;
 }
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
-}
-
-.day-box {
-    aspect-ratio: 1;
-    border: 1px solid rgba(0,0,0,0.1);
-    background: rgba(255,255,255,0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    cursor: pointer;
-    border-radius: 4px;
-}
-
-.day-active { background: #000 !important; color: #fff; }
 
 .draw-canvas {
     background: white;
-    border-radius: 8px;
-    border: 1px solid #000;
+    border: var(--border-width) solid var(--accent);
     width: 100%;
+    flex-grow: 1;
+    cursor: crosshair;
+}
+
+/* --- UI HELPERS --- */
+#ws-manage-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding-left: 10px;
+    border-left: 1px solid #ccc;
+}
+
+.danger-text { 
+    color: var(--danger); 
+    font-weight: 800; 
+    cursor: pointer; 
+    font-size: 0.75rem; 
+    text-transform: uppercase;
+}
+
+.edit-text { 
+    color: #666; 
+    cursor: pointer; 
+    font-size: 0.75rem; 
+    text-decoration: underline;
+    text-transform: uppercase;
 }
 
 .fab {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 60px;
-    height: 60px;
-    background: #000;
+    width: 65px;
+    height: 65px;
+    background: var(--accent);
     color: #fff;
-    border: none;
+    border: var(--border-width) solid var(--accent);
     border-radius: 50%;
-    font-size: 30px;
+    font-size: 35px;
     cursor: pointer;
-    box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
+    box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99;
 }
 
-/* Card Resizing */
-.module {
-    /* ... (previous styles) ... */
-    resize: both; /* Allows manual resizing */
-    overflow: auto; /* Required for resize to work */
-    min-width: 300px;
-    min-height: 250px;
+.overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
 }
 
-/* Workspace Management UI */
-.workspace-bar {
-    border-bottom: 2px solid #000;
-}
-
-.danger-text {
-    color: #ff5757;
-    font-weight: bold;
-    cursor: pointer;
-    font-size: 0.8rem;
-    margin-left: 10px;
-}
-
-.edit-text {
-    color: #666;
-    cursor: pointer;
-    font-size: 0.8rem;
-    margin-left: 10px;
-    text-decoration: underline;
+.auth-card {
+    background: white;
+    padding: 40px;
+    border: var(--border-width) solid var(--accent);
+    box-shadow: 12px 12px 0px var(--accent);
+    width: 90%;
+    max-width: 420px;
+    text-align: center;
 }
