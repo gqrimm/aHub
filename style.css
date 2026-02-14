@@ -233,3 +233,18 @@ body {
     max-width: 420px;
     text-align: center;
 }
+
+/* Add to your CSS */
+.module.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    border: 2px dashed var(--accent);
+}
+
+.card-header {
+    cursor: grab; /* Shows the user they can move the card */
+}
+
+.card-header:active {
+    cursor: grabbing;
+}

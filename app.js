@@ -26,6 +26,7 @@ const app = {
             }
         });
 
+        // Real-time listener for database changes
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
@@ -34,56 +35,26 @@ const app = {
         const name = prompt("Enter Space Name:");
         if (!name) return;
         const spaceId = Math.random().toString(36).substring(2, 9);
-        
-        const { error } = await sb.from('user_workspaces').insert([
-            { user_id: this.user.id, workspace_id: spaceId, workspace_name: name }
-        ]);
-
+        const { error } = await sb.from('user_workspaces').insert([{ user_id: this.user.id, workspace_id: spaceId, workspace_name: name }]);
         if (error) alert(error.message);
-        else {
-            alert(`Space Created! ID: ${spaceId}`);
-            this.switchWorkspace(spaceId);
-        }
+        else this.switchWorkspace(spaceId);
     },
 
-    renameWorkspace: async function() {
-        if (!this.currentWorkspace) return;
-        const newName = prompt("Enter new space name:");
-        if (!newName) return;
-
-        const { error } = await sb.from('user_workspaces')
-            .update({ workspace_name: newName })
-            .eq('workspace_id', this.currentWorkspace)
-            .eq('user_id', this.user.id);
-
-        if (error) alert(error.message);
-        else this.fetchWorkspaces();
-    },
-
-    deleteWorkspace: async function() {
-        if (!this.currentWorkspace) return;
-        if (!confirm("Remove this space from your list?")) return;
-
-        const { error } = await sb.from('user_workspaces')
-            .delete()
-            .eq('workspace_id', this.currentWorkspace)
-            .eq('user_id', this.user.id);
-
-        if (error) alert(error.message);
-        else this.switchWorkspace(null); 
+    switchWorkspace: function(id) {
+        this.currentWorkspace = id || null;
+        id ? localStorage.setItem('active_workspace', id) : localStorage.removeItem('active_workspace');
+        const url = new URL(window.location);
+        id ? url.searchParams.set('space', id) : url.searchParams.delete('space');
+        window.history.pushState({}, '', url);
+        this.fetchTrackers();
+        this.fetchWorkspaces();
     },
 
     fetchWorkspaces: async function() {
         const { data } = await sb.from('user_workspaces').select('*').eq('user_id', this.user.id);
         this.workspaces = data || [];
         const dropdown = document.getElementById('workspace-dropdown');
-        const manageBox = document.getElementById('ws-manage-controls');
-        
         dropdown.innerHTML = '<option value="">🏠 Private Space</option>';
-        
-        if (this.currentWorkspace) manageBox?.classList.remove('hidden');
-        else manageBox?.classList.add('hidden');
-
         this.workspaces.forEach(ws => {
             const opt = document.createElement('option');
             opt.value = ws.workspace_id;
@@ -93,44 +64,16 @@ const app = {
         });
     },
 
-    joinWorkspace: async function(id) {
-        if (!id) return;
-        const name = prompt("Name this space for your list:");
-        const { error } = await sb.from('user_workspaces').insert([
-            { user_id: this.user.id, workspace_id: id, workspace_name: name || id }
-        ]);
-        if (error) alert("Joined!");
-        this.switchWorkspace(id);
-    },
-
-    switchWorkspace: function(id) {
-        this.currentWorkspace = id || null;
-        if (id) localStorage.setItem('active_workspace', id);
-        else localStorage.removeItem('active_workspace');
-        
-        const url = new URL(window.location);
-        id ? url.searchParams.set('space', id) : url.searchParams.delete('space');
-        window.history.pushState({}, '', url);
-        
-        this.fetchTrackers();
-        this.fetchWorkspaces();
-    },
-
-    copyInviteLink: function() {
-        if (!this.currentWorkspace) return alert("Switch to a shared Space first!");
-        const link = window.location.origin + window.location.pathname + '?space=' + this.currentWorkspace;
-        navigator.clipboard.writeText(link);
-        alert("Invite link copied!");
-    },
-
+    // --- TRACKER LOGIC ---
     fetchTrackers: async function() {
         if (!this.user) return;
         let query = sb.from('trackers').select('*');
         if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
         else query = query.eq('user_id', this.user.id).is('workspace_id', null);
         
-        const { data } = await query.order('created_at', { ascending: true });
-        this.trackers = data || [];
+        const { data } = await query;
+        // Sort by custom order saved in history_data
+        this.trackers = (data || []).sort((a, b) => (a.history_data.order || 0) - (b.history_data.order || 0));
         this.render();
     },
 
@@ -139,17 +82,11 @@ const app = {
         const type = document.getElementById('track-type').value;
         if(!name) return alert("Enter a name");
 
-        let initialData = {};
-        if (type === 'code') {
-            initialData = { code: "<h1>New Code Card</h1><p>Click Edit Source to change this!</p>" };
-        } else if (type === 'drawing') {
-            initialData = { img: null };
-        }
-
+        let initialData = { order: this.trackers.length };
+        if (type === 'code') initialData.code = "<h1>New Code Card</h1>";
+        
         await sb.from('trackers').insert([{ 
-            name, 
-            type, 
-            user_id: this.user.id, 
+            name, type, user_id: this.user.id, 
             workspace_id: this.currentWorkspace, 
             history_data: initialData 
         }]);
@@ -158,22 +95,7 @@ const app = {
         this.fetchTrackers(); 
     },
 
-    login: async function() {
-        const email = document.getElementById('user').value;
-        const password = document.getElementById('pass').value;
-        const { error } = await sb.auth.signInWithPassword({ email, password });
-        if (error) alert(error.message);
-    },
-
-    register: async function() {
-        const email = document.getElementById('user').value;
-        const password = document.getElementById('pass').value;
-        const { error } = await sb.auth.signUp({ email, password });
-        if (error) alert(error.message); else alert("Check email!");
-    },
-
-    logout: async function() { await sb.auth.signOut(); location.reload(); },
-
+    // --- RENDERING & INTERACTION ---
     render: function() {
         const container = document.getElementById('module-container');
         container.innerHTML = '';
@@ -181,8 +103,8 @@ const app = {
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
             card.id = `card-${t.id}`;
+            card.draggable = true;
             
-            // APPLY SAVED SIZE
             if (t.history_data.w) card.style.width = t.history_data.w + 'px';
             if (t.history_data.h) card.style.height = t.history_data.h + 'px';
 
@@ -191,11 +113,24 @@ const app = {
                     <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
-                <div class="card-body" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+                <div class="card-body">
                     ${this.getTypeHTML(t)}
                 </div>`;
-                
-            // SAVE SIZE ON MOUSE UP
+            
+            // Drag & Drop Handlers
+            card.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); card.classList.add('dragging'); };
+            card.ondragend = () => card.classList.remove('dragging');
+            card.ondragover = (e) => {
+                e.preventDefault();
+                const draggingCard = document.querySelector('.dragging');
+                const cards = [...container.querySelectorAll('.module:not(.dragging)')];
+                const nextCard = cards.find(c => {
+                    const rect = c.getBoundingClientRect();
+                    return e.clientX < rect.left + rect.width / 2 && e.clientY < rect.top + rect.height / 2;
+                });
+                nextCard ? container.insertBefore(draggingCard, nextCard) : container.appendChild(draggingCard);
+            };
+            card.ondrop = () => this.saveNewOrder();
             card.onmouseup = () => this.saveSize(t.id);
 
             container.appendChild(card);
@@ -205,7 +140,6 @@ const app = {
 
     getTypeHTML: function(t) {
         const history = t.history_data || {};
-
         if (t.type === 'bool' || t.type === 'text') {
             let cal = '<div class="calendar-grid">';
             for (let i = 13; i >= 0; i--) {
@@ -215,141 +149,78 @@ const app = {
             }
             cal += '</div>';
             const val = history[this.selectedDate] || "";
-            const input = t.type === 'bool' ? 
+            return `<small>${this.selectedDate}</small>${cal}` + (t.type === 'bool' ? 
                 `<button class="neal-btn ${val ? 'primary' : ''}" style="width:100%; margin-top:10px;" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` :
-                `<input type="text" class="neal-input" style="width:100%; margin-top:10px;" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
-            return `<small>${this.selectedDate}</small>${cal}${input}`;
+                `<input type="text" class="neal-input" style="width:100%; margin-top:10px;" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`);
         }
-
-        if (t.type === 'pure-text') {
-            return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${history.note || ''}</textarea>`;
-        }
-
-        if (t.type === 'drawing') {
-            return `<canvas id="canvas-${t.id}" class="draw-canvas" style="flex-grow:1; min-height:150px; border:1px solid #000;"></canvas>
-                    <button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
-        }
-
-        if (t.type === 'code') {
-            const codeFallback = history.code || "<h1>Empty Card</h1>";
-            return `
-                <div style="flex-grow:1; display:flex; flex-direction:column; gap:10px; height:100%;">
-                    <iframe id="preview-${t.id}" srcdoc="${codeFallback.replace(/"/g, '&quot;')}" style="border:1px solid #000; background:#fff; flex-grow:1; width:100%; min-height:200px;"></iframe>
-                    <button class="neal-btn" onclick="app.editCode(${t.id})" style="font-size:10px;">Edit Source</button>
-                </div>
-            `;
-        }
+        if (t.type === 'pure-text') return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${history.note || ''}</textarea>`;
+        if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
+        if (t.type === 'code') return `<div style="flex-grow:1; display:flex; flex-direction:column; gap:10px; height:100%;"><iframe srcdoc="${(history.code || '').replace(/"/g, '&quot;')}" style="border:1px solid #000; background:#fff; flex-grow:1; width:100%;"></iframe><button class="neal-btn" onclick="app.editCode(${t.id})" style="font-size:10px;">Edit Source</button></div>`;
         return '';
     },
 
+    // --- UPDATES & SAVING ---
     logValue: async function(id, key, val) {
         const t = this.trackers.find(x => x.id === id);
-        let history = { ...(t.history_data || {}) };
+        let history = { ...t.history_data };
         t.type === 'bool' ? (history[key] = !history[key]) : (history[key] = val);
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
         this.fetchTrackers();
     },
 
-    editCode: function(id) {
-        const t = this.trackers.find(x => x.id === id);
-        const currentCode = (t.history_data && t.history_data.code) ? t.history_data.code : "";
-
-        // Create a temporary overlay for editing
-        const editorDiv = document.createElement('div');
-        editorDiv.className = 'overlay';
-        editorDiv.innerHTML = `
-            <div class="auth-card" style="max-width: 80%; width: 800px; height: 80%;">
-                <h3 style="margin-top:0">CODE EDITOR</h3>
-                <textarea id="code-editor-area" style="width:100%; height:70%; font-family:monospace; padding:10px; border:2px solid #000; resize:none;">${currentCode}</textarea>
-                <div style="margin-top:20px; display:flex; gap:10px; justify-content: flex-end;">
-                    <button class="neal-btn" id="close-editor">Cancel</button>
-                    <button class="neal-btn primary" id="save-code">Save & Push</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(editorDiv);
-
-        // Save Logic
-        document.getElementById('save-code').onclick = async () => {
-            const newCode = document.getElementById('code-editor-area').value;
-            let history = { ...t.history_data, code: newCode };
-            await sb.from('trackers').update({ history_data: history }).eq('id', id);
-            document.body.removeChild(editorDiv);
-            this.fetchTrackers();
-        };
-
-        // Close Logic
-        document.getElementById('close-editor').onclick = () => {
-            document.body.removeChild(editorDiv);
-        };
-    },
-
     saveSize: async function(id) {
         const el = document.getElementById(`card-${id}`);
         const t = this.trackers.find(x => x.id === id);
-        
-        const newW = el.offsetWidth;
-        const newH = el.offsetHeight;
-
-        // Only update if the size actually changed to save database calls
-        if (t.history_data.w !== newW || t.history_data.h !== newH) {
-            let history = { ...t.history_data, w: newW, h: newH };
-            
-            // Update local data so it doesn't "jump" on next render
-            t.history_data.w = newW;
-            t.history_data.h = newH;
-
+        if (t.history_data.w !== el.offsetWidth || t.history_data.h !== el.offsetHeight) {
+            let history = { ...t.history_data, w: el.offsetWidth, h: el.offsetHeight };
             await sb.from('trackers').update({ history_data: history }).eq('id', id);
-            console.log(`Saved size for ${t.name}: ${newW}x${newH}`);
         }
     },
 
+    saveNewOrder: async function() {
+        const cardElements = [...document.querySelectorAll('.module')];
+        const updates = cardElements.map((el, index) => {
+            const id = el.id.replace('card-', '');
+            const tracker = this.trackers.find(t => t.id == id);
+            return sb.from('trackers').update({ history_data: { ...tracker.history_data, order: index } }).eq('id', id);
+        });
+        await Promise.all(updates);
+    },
+
+    editCode: function(id) {
+        const t = this.trackers.find(x => x.id === id);
+        const editorDiv = document.createElement('div');
+        editorDiv.className = 'overlay';
+        editorDiv.innerHTML = `<div class="auth-card" style="max-width: 80%; width: 800px; height: 80%;"><textarea id="code-editor-area" style="width:100%; height:80%; font-family:monospace; padding:10px; border:2px solid #000;">${t.history_data.code || ""}</textarea><div style="margin-top:20px; display:flex; gap:10px; justify-content: flex-end;"><button class="neal-btn" id="close-editor">Cancel</button><button class="neal-btn primary" id="save-code">Save</button></div></div>`;
+        document.body.appendChild(editorDiv);
+        document.getElementById('save-code').onclick = async () => {
+            const newCode = document.getElementById('code-editor-area').value;
+            await sb.from('trackers').update({ history_data: { ...t.history_data, code: newCode } }).eq('id', id);
+            document.body.removeChild(editorDiv);
+            this.fetchTrackers();
+        };
+        document.getElementById('close-editor').onclick = () => document.body.removeChild(editorDiv);
+    },
+
+    // --- CANVAS, AUTH & UI HELPERS ---
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
         if(!canvas) return;
         const ctx = canvas.getContext('2d');
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-
-        if (t.history_data && t.history_data.img) { 
-            const img = new Image(); 
-            img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height); 
-            img.src = t.history_data.img; 
-        }
-        
+        canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight;
+        if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img,0,0, canvas.width, canvas.height); img.src = t.history_data.img; }
         let draw = false;
         canvas.onmousedown = (e) => { draw = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if(draw) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
-        canvas.onmouseup = async () => { 
-            draw = false; 
-            await sb.from('trackers').update({ 
-                history_data: { ...t.history_data, img: canvas.toDataURL() } 
-            }).eq('id', t.id); 
-        };
-    },
-
-    clearCanvas: async function(id) {
-        const canvas = document.getElementById(`canvas-${id}`);
-        if (!canvas) return;
-        canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
-        const t = this.trackers.find(x => x.id === id);
-        await sb.from('trackers').update({ history_data: { ...t.history_data, img: null } }).eq('id', id);
+        canvas.onmouseup = async () => { draw = false; await sb.from('trackers').update({ history_data: { ...t.history_data, img: canvas.toDataURL() } }).eq('id', t.id); };
     },
 
     deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },
-    
-    showDashboard: function() { 
-        document.getElementById('auth-overlay').classList.add('hidden'); 
-        document.getElementById('main-content').classList.remove('hidden'); 
-        this.fetchWorkspaces();
-        this.fetchTrackers(); 
-    },
-    
-    showLogin: function() { 
-        document.getElementById('auth-overlay').classList.remove('hidden'); 
-        document.getElementById('main-content').classList.add('hidden'); 
-    },
-    
+    showDashboard: function() { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); this.fetchWorkspaces(); this.fetchTrackers(); },
+    showLogin: function() { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
+    login: async function() { const email = document.getElementById('user').value, pass = document.getElementById('pass').value; const { error } = await sb.auth.signInWithPassword({ email, password: pass }); if (error) alert(error.message); },
+    register: async function() { const email = document.getElementById('user').value, pass = document.getElementById('pass').value; const { error } = await sb.auth.signUp({ email, password: pass }); if (error) alert(error.message); else alert("Check email!"); },
+    logout: async function() { await sb.auth.signOut(); location.reload(); },
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden')
 };
