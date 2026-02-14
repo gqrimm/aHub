@@ -12,12 +12,10 @@ const app = {
     init: async function() {
         const { data: { session } } = await sb.auth.getSession();
         if (session) { this.user = session.user; this.showDashboard(); }
-
         sb.auth.onAuthStateChange(async (event, session) => {
             if (session) { this.user = session.user; this.showDashboard(); }
             else { this.user = null; this.showLogin(); }
         });
-
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
@@ -31,7 +29,7 @@ const app = {
     },
 
     renameWorkspace: async function() {
-        if (!this.currentWorkspace) return alert("Select a space first");
+        if (!this.currentWorkspace) return;
         const newName = prompt("New space name:");
         if (!newName) return;
         await sb.from('user_workspaces').update({ workspace_name: newName }).eq('workspace_id', this.currentWorkspace);
@@ -42,6 +40,12 @@ const app = {
         if (!this.currentWorkspace || !confirm("Delete this entire space?")) return;
         await sb.from('user_workspaces').delete().eq('workspace_id', this.currentWorkspace);
         this.switchWorkspace(null);
+    },
+
+    copyInviteLink: function() {
+        if (!this.currentWorkspace) return alert("Select a space first!");
+        const url = window.location.origin + window.location.pathname + "?space=" + this.currentWorkspace;
+        navigator.clipboard.writeText(url).then(() => alert("Link copied! Share it with your team."));
     },
 
     switchWorkspace: function(id) {
@@ -58,7 +62,7 @@ const app = {
         const { data } = await sb.from('user_workspaces').select('*').eq('user_id', this.user.id);
         this.workspaces = data || [];
         const dropdown = document.getElementById('workspace-dropdown');
-        if (!dropdown) return;
+        if(!dropdown) return;
         dropdown.innerHTML = '<option value="">🏠 Private Space</option>';
         this.workspaces.forEach(ws => {
             const opt = document.createElement('option');
@@ -67,7 +71,6 @@ const app = {
             if (this.currentWorkspace === ws.workspace_id) opt.selected = true;
             dropdown.appendChild(opt);
         });
-
         const controls = document.getElementById('ws-manage-controls');
         if (controls) controls.style.display = this.currentWorkspace ? 'flex' : 'none';
     },
@@ -78,7 +81,6 @@ const app = {
         let query = sb.from('trackers').select('*');
         if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
         else query = query.eq('user_id', this.user.id).is('workspace_id', null);
-        
         const { data } = await query;
         this.trackers = (data || []).sort((a, b) => (a.history_data.order || 0) - (b.history_data.order || 0));
         this.render();
@@ -88,16 +90,9 @@ const app = {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
         if(!name) return alert("Enter a name");
-
         let initialData = { order: this.trackers.length, colSpan: 1, rowSpan: 1 };
         if (type === 'code') initialData.code = "<h1>New Code Card</h1>";
-        
-        await sb.from('trackers').insert([{ 
-            name, type, user_id: this.user.id, 
-            workspace_id: this.currentWorkspace, 
-            history_data: initialData 
-        }]);
-
+        await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: initialData }]);
         this.closeModal();
         this.fetchTrackers(); 
     },
@@ -112,27 +107,23 @@ const app = {
             card.className = `module type-${t.type}`;
             card.id = `card-${t.id}`;
 
-            // Apply Spans (for Grid Layout) and Pixels (for fine-tuning)
+            // Apply Saved Grid Spans
             card.style.gridColumn = `span ${h.colSpan || 1}`;
             card.style.gridRow = `span ${h.rowSpan || 1}`;
+            // Optional: apply pixel override if available, though grid handles most of it
             if(h.w) card.style.width = h.w + 'px';
             if(h.h) card.style.height = h.h + 'px';
 
             card.innerHTML = `
-                <div class="card-header" draggable="true" style="cursor: grab;">
+                <div class="card-header" draggable="true">
                     <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
-                <div class="card-body">
-                    ${this.getTypeHTML(t)}
-                </div>`;
+                <div class="card-body">${this.getTypeHTML(t)}</div>`;
 
-            // --- DRAG TO MOVE (Header Only) ---
+            // DRAG TO MOVE (Header Only)
             const header = card.querySelector('.card-header');
-            header.ondragstart = (e) => { 
-                card.classList.add('dragging'); 
-                e.dataTransfer.setData('text/plain', t.id); 
-            };
+            header.ondragstart = (e) => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', t.id); };
             header.ondragend = () => card.classList.remove('dragging');
 
             card.ondragover = (e) => {
@@ -148,7 +139,7 @@ const app = {
             };
             card.ondrop = () => this.saveNewOrder();
 
-            // --- RESIZE TO SNAP ---
+            // RESIZE SNAP (The Fix)
             card.onmouseup = () => this.handleResize(t.id);
 
             container.appendChild(card);
@@ -161,21 +152,18 @@ const app = {
         const t = this.trackers.find(x => x.id === id);
         if (!el || !t) return;
 
-        // Convert pixel width/height to Grid Spans
-        // Base Unit: 320px width, 220px height
-        const newColSpan = Math.max(1, Math.ceil(el.offsetWidth / 320));
-        const newRowSpan = Math.max(1, Math.ceil(el.offsetHeight / 220));
+        // Calculate spans: Divide width by approx column size (300px + gap)
+        const newColSpan = Math.max(1, Math.ceil(el.offsetWidth / 300));
+        const newRowSpan = Math.max(1, Math.ceil(el.offsetHeight / 200));
 
-        if (newColSpan !== t.history_data.colSpan || newRowSpan !== t.history_data.rowSpan || 
-            el.offsetWidth !== t.history_data.w) {
-            
+        if (newColSpan !== t.history_data.colSpan || newRowSpan !== t.history_data.rowSpan || el.offsetWidth !== t.history_data.w) {
             t.history_data.colSpan = newColSpan;
             t.history_data.rowSpan = newRowSpan;
             t.history_data.w = el.offsetWidth;
             t.history_data.h = el.offsetHeight;
 
             await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
-            this.render(); // Force grid to snap and push other cards
+            this.render(); // Snap to grid
         }
     },
 

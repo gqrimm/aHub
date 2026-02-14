@@ -15,41 +15,34 @@
             <h1>Welcome.</h1>
             <p style="margin-bottom: 20px; font-size: 0.9rem; color: #666;">Sign in to your workspace</p>
             <input type="email" id="user" placeholder="Email" class="neal-input">
-            <input type="password" id="pass" placeholder="Password" class="neal-input">
-            <div class="auth-buttons">
+            <input type="password" id="pass" placeholder="Password" class="neal-input" style="margin-top:10px;">
+            <div class="auth-buttons" style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
                 <button onclick="app.login()" class="neal-btn primary">Login</button>
                 <button onclick="app.register()" class="neal-btn">Sign Up</button>
             </div>
-            <button onclick="app.forgotPassword()" style="margin-top:20px; background:none; border:none; text-decoration:underline; cursor:pointer; font-size:0.8rem;">Forgot Password?</button>
         </div>
     </div>
 
     <div id="main-content" class="hidden">
         <header class="main-header">
-            <div class="logo" style="font-weight: 900; font-size: 1.5rem;">aHub</div>
-            <button onclick="app.logout()" class="neal-btn">Logout</button>
+            <div style="font-weight:900; font-size:1.5rem; letter-spacing:-1px;">aHub.</div>
+            <button onclick="app.logout()" class="neal-btn">Log Out</button>
         </header>
 
-        <section class="workspace-bar" style="padding: 20px; background: #fff; border-bottom: 1px solid #000; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="join-work-id" placeholder="Space ID" class="neal-input" style="width: 140px; margin-bottom:0;">
-                <button onclick="app.joinWorkspace(document.getElementById('join-work-id').value)" class="neal-btn">Join</button>
-            </div>
-            
-            <div style="display:flex; gap:10px; align-items:center;">
-                <select id="workspace-dropdown" class="neal-input" style="width: 200px; margin-bottom:0;" onchange="app.switchWorkspace(this.value)">
+        <section class="workspace-bar">
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <select id="workspace-dropdown" class="neal-input" style="width: 200px;" onchange="app.switchWorkspace(this.value)">
                     <option value="">🏠 Private Space</option>
                 </select>
+                
                 <button onclick="app.createNewWorkspace()" class="neal-btn primary">+ New Space</button>
                 
-                <select id="workspace-dropdown" onchange="app.switchWorkspace(this.value)"></select>
-                <div id="ws-manage-controls">
+                <div id="ws-manage-controls" style="display:none; align-items:center; gap:10px;">
                     <button class="neal-btn" onclick="app.renameWorkspace()">Rename</button>
                     <button class="neal-btn" onclick="app.deleteWorkspace()">Delete</button>
+                    <button class="neal-btn" onclick="app.copyInviteLink()">🔗 Invite</button>
                 </div>
             </div>
-
-            <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
         </section>
 
         <main id="module-container" class="grid-container"></main>
@@ -60,15 +53,15 @@
     <div id="modal-overlay" class="overlay hidden">
         <div class="auth-card">
             <h2>New Module</h2>
-            <input type="text" id="track-name" placeholder="Name" class="neal-input">
-            <select id="track-type" class="neal-input">
+            <input type="text" id="track-name" placeholder="Name" class="neal-input" style="width:100%; margin-bottom:10px;">
+            <select id="track-type" class="neal-input" style="width:100%; margin-bottom:20px;">
                 <option value="bool">📅 Calendar: Checkmark</option>
                 <option value="text">📅 Calendar: Text Value</option>
                 <option value="pure-text">📝 Sticky Note</option>
                 <option value="drawing">🎨 Drawing Board</option>
                 <option value="code">👩‍💻 Custom Code (HTML/CSS)</option>
             </select>
-            <div class="auth-buttons">
+            <div style="display:flex; gap:10px; justify-content:center;">
                 <button onclick="app.createTracker()" class="neal-btn primary">Create</button>
                 <button onclick="app.closeModal()" class="neal-btn">Cancel</button>
             </div>
