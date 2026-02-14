@@ -5,87 +5,74 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = {
     user: null,
     trackers: [],
-    myWorkspaces: [],
     currentWorkspace: new URLSearchParams(window.location.search).get('space') || localStorage.getItem('active_workspace') || null,
     selectedDate: new Date().toISOString().split('T')[0],
 
     init: async function() {
-        // 1. Check current session
         const { data: { session } } = await sb.auth.getSession();
         if (session) {
             this.user = session.user;
             this.showDashboard();
         }
 
-        // 2. Single Auth Listener for EVERYTHING
-       sb.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth Event:", event); // Debugging line
-            
+        // Listen for Login, Logout, and Password Reset Links
+        sb.auth.onAuthStateChange(async (event, session) => {
             if (event === "PASSWORD_RECOVERY") {
-                const newPassword = prompt("Type your new password:");
+                const newPassword = prompt("Enter your new password:");
                 if (newPassword) {
                     const { error } = await sb.auth.updateUser({ password: newPassword });
                     if (error) alert("Error: " + error.message);
-                    else alert("Password updated successfully! You can now log in.");
+                    else alert("Password updated! You can now log in.");
                 }
             }
-
             if (session) {
                 this.user = session.user;
                 this.showDashboard();
             } else {
+                this.user = null;
                 this.showLogin();
             }
         });
 
-        // 3. Realtime updates
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
-    login: async () => {
-        const { error } = await sb.auth.signInWithPassword({ 
-            email: document.getElementById('user').value, 
-            password: document.getElementById('pass').value 
-        });
+    // --- AUTH FUNCTIONS ---
+    login: async function() {
+        const email = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+        const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) alert(error.message);
     },
 
-    register: async () => {
-        const { error } = await sb.auth.signUp({ 
-            email: document.getElementById('user').value, 
-            password: document.getElementById('pass').value 
-        });
-        if (error) alert(error.message); 
-        else alert("Check email for verification!");
+    register: async function() {
+        const email = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+        const { error } = await sb.auth.signUp({ email, password });
+        if (error) alert(error.message); else alert("Check email for verification!");
     },
 
-    // --- ADDED THIS BACK IN ---
+    // THIS IS THE MISSING FUNCTION
     forgotPassword: async function() {
-        const emailInput = document.getElementById('user');
-        const email = emailInput ? emailInput.value : "";
-
+        const email = document.getElementById('user').value;
         if (!email) {
-            alert("Please type your email address in the email field first!");
+            alert("Please type your email address in the Email field first.");
             return;
         }
-
         const { error } = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin, // Sends them back to your homepage
+            redirectTo: window.location.origin + window.location.pathname,
         });
-
-        if (error) {
-            alert("Error: " + error.message);
-        } else {
-            alert("Check your inbox! We sent a reset link to: " + email);
-        }
+        if (error) alert("Rate limit or Error: " + error.message);
+        else alert("Reset link sent! Check your inbox.");
     },
 
-    logout: async () => { 
+    logout: async function() { 
         await sb.auth.signOut(); 
         localStorage.clear(); 
         location.reload(); 
     },
 
+    // --- CORE LOGIC ---
     fetchTrackers: async function() {
         if (!this.user) return;
         let query = sb.from('trackers').select('*');
@@ -99,11 +86,7 @@ const app = {
     createTracker: async function() {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
-        await sb.from('trackers').insert([{ 
-            name, type, user_id: this.user.id, 
-            workspace_id: this.currentWorkspace, 
-            history_data: {} 
-        }]);
+        await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: {} }]);
         this.closeModal();
     },
 
@@ -114,6 +97,7 @@ const app = {
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
     },
 
+    // --- VIEW RENDERING ---
     render: function() {
         const container = document.getElementById('module-container');
         if (!container) return;
@@ -175,4 +159,5 @@ const app = {
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden'),
     copyInviteLink: function() { navigator.clipboard.writeText(location.origin + location.pathname + '?space=' + this.currentWorkspace); alert("Copied!"); }
 };
+
 app.init();
