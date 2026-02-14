@@ -105,24 +105,22 @@ const app = {
             card.id = `card-${t.id}`;
             card.draggable = true;
             
-            // --- PERSISTENT SIZE & GRID SPACING ---
+            // Inside your render loop:
             const h = t.history_data || {};
-            
-            // 1. Apply column span (Prevents horizontal overlap)
+
             if (h.colSpan) {
                 card.style.gridColumn = `span ${h.colSpan}`;
-            } else if (h.gridSpan) {
-                card.style.gridColumn = h.gridSpan;
+                card.style.width = "100%"; // Force card to fill the span
+            } else if (h.w) {
+                card.style.width = h.w + 'px';
             }
 
-            // 2. Apply row span (Prevents vertical overlap)
             if (h.rowSpan) {
                 card.style.gridRow = `span ${h.rowSpan}`;
+                card.style.height = "100%"; // Force card to fill the span
+            } else if (h.h) {
+                card.style.height = h.h + 'px';
             }
-
-            // 3. Set the physical size (Use 100% to fill the grid cells we just defined)
-            if (h.w) card.style.width = h.w + 'px';
-            if (h.h) card.style.height = h.h + 'px';
 
             card.innerHTML = `
                 <div class="card-header">
@@ -199,30 +197,30 @@ const app = {
         const t = this.trackers.find(x => x.id === id);
         if (!el || !t) return;
 
-        const width = el.offsetWidth;
-        const height = el.offsetHeight;
+        const newW = el.offsetWidth;
+        const newH = el.offsetHeight;
 
-        // Logic: Every 350px of width adds another column span
-        let colSpan = Math.ceil(width / 350);
-        if (colSpan > 3) colSpan = 3; // Limit to 3 columns wide
+        // We assume a base grid column width of roughly 300px (matching your CSS)
+        const colSpan = Math.max(1, Math.ceil(newW / 320)); 
+        const rowSpan = Math.max(1, Math.ceil(newH / 220));
 
-        // Logic: Every 250px of height adds another row span
-        let rowSpan = Math.ceil(height / 250);
-
-        // Apply the spans immediately so the grid reacts
+        // Update the UI immediately so it doesn't "snap back"
         el.style.gridColumn = `span ${colSpan}`;
         el.style.gridRow = `span ${rowSpan}`;
 
-        // Reset inline width/height so it doesn't conflict with grid-span
-        el.style.width = "100%";
-        el.style.height = "100%";
-
-        if (t.history_data.colSpan !== colSpan || t.history_data.rowSpan !== rowSpan) {
+        // Only update DB if values changed
+        if (t.history_data.w !== newW || t.history_data.colSpan !== colSpan) {
             let history = { 
                 ...t.history_data, 
+                w: newW, 
+                h: newH, 
                 colSpan: colSpan, 
                 rowSpan: rowSpan 
             };
+            
+            // Update local memory so render() has the right data
+            t.history_data = history;
+
             await sb.from('trackers').update({ history_data: history }).eq('id', id);
         }
     },
