@@ -46,11 +46,13 @@ body {
 
 .grid-container {
     display: grid;
+    /* Strict columns: 300px each */
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    grid-auto-flow: row dense; /* This "plugs" holes automatically */
-    gap: 25px;
-    padding: 30px;
-    align-items: stretch; /* Cards will fill their grid area */
+    /* Strict rows: 200px each */
+    grid-auto-rows: 200px; 
+    grid-auto-flow: row dense; 
+    gap: 20px;
+    padding: 20px;
 }
 
 .module {
@@ -59,15 +61,10 @@ body {
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    position: relative;
-    
-    /* RESIZE LOGIC */
-    resize: both;
     overflow: hidden;
-    
-    /* These ensure the card pushes others away */
-    grid-column: span 1;
-    grid-row: span 1;
+    /* We handle size via grid spans, not pixels */
+    width: 100%;
+    height: 100%;
 }
 
 .module:hover {

@@ -100,62 +100,43 @@ const app = {
         const container = document.getElementById('module-container');
         container.innerHTML = '';
         this.trackers.forEach(t => {
+            const h = t.history_data || {};
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
             card.id = `card-${t.id}`;
             card.draggable = true;
-            
-            // Inside your render loop:
-            const h = t.history_data || {};
 
-            if (h.colSpan) {
-                card.style.gridColumn = `span ${h.colSpan}`;
-                card.style.width = "100%"; // Force card to fill the span
-            } else if (h.w) {
-                card.style.width = h.w + 'px';
-            }
-
-            if (h.rowSpan) {
-                card.style.gridRow = `span ${h.rowSpan}`;
-                card.style.height = "100%"; // Force card to fill the span
-            } else if (h.h) {
-                card.style.height = h.h + 'px';
-            }
+            // Apply spans (The "Source of Truth")
+            card.style.gridColumn = `span ${h.colSpan || 1}`;
+            card.style.gridRow = `span ${h.rowSpan || 1}`;
 
             card.innerHTML = `
                 <div class="card-header">
-                    <span>${t.name}</span>
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="app.toggleWidth(${t.id})" class="neal-btn" style="padding:2px 5px; font-size:10px;">↔</button>
+                        <button onclick="app.toggleHeight(${t.id})" class="neal-btn" style="padding:2px 5px; font-size:10px;">↕</button>
+                        <span>${t.name}</span>
+                    </div>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
                 <div class="card-body">
                     ${this.getTypeHTML(t)}
                 </div>`;
-            
-            // Drag & Drop Handlers
-            card.ondragstart = (e) => { 
-                e.dataTransfer.setData('text/plain', t.id); 
-                card.classList.add('dragging'); 
-            };
+
+            // Keep your working drag/drop logic here
+            card.ondragstart = (e) => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', t.id); };
             card.ondragend = () => card.classList.remove('dragging');
-            
             card.ondragover = (e) => {
                 e.preventDefault();
                 const draggingCard = document.querySelector('.dragging');
                 const siblings = [...container.querySelectorAll('.module:not(.dragging)')];
-
-                const nextSibling = siblings.find(sibling => {
-                    const rect = sibling.getBoundingClientRect();
-                    // We check both X and Y for a more natural grid shuffle
-                    return e.clientY <= rect.top + rect.height / 2 && e.clientX <= rect.left + rect.width / 2;
+                const nextSibling = siblings.find(s => {
+                    const r = s.getBoundingClientRect();
+                    return e.clientY <= r.top + r.height / 2;
                 });
-
                 container.insertBefore(draggingCard, nextSibling);
             };
-
             card.ondrop = () => this.saveNewOrder();
-            
-            // Mouseup handles both saving the final size and updating grid spans
-            card.onmouseup = () => this.saveSize(t.id);
 
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
@@ -192,37 +173,27 @@ const app = {
         this.fetchTrackers();
     },
 
-    saveSize: async function(id) {
-        const el = document.getElementById(`card-${id}`);
+    // Replace saveSize with this
+    toggleWidth: async function(id) {
         const t = this.trackers.find(x => x.id === id);
-        if (!el || !t) return;
+        let h = t.history_data;
+        // Cycle through 1, 2, or 3 columns
+        let newSpan = (h.colSpan || 1) >= 3 ? 1 : (h.colSpan || 1) + 1;
+        
+        t.history_data.colSpan = newSpan;
+        await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
+        this.render();
+    },
 
-        const newW = el.offsetWidth;
-        const newH = el.offsetHeight;
-
-        // We assume a base grid column width of roughly 300px (matching your CSS)
-        const colSpan = Math.max(1, Math.ceil(newW / 320)); 
-        const rowSpan = Math.max(1, Math.ceil(newH / 220));
-
-        // Update the UI immediately so it doesn't "snap back"
-        el.style.gridColumn = `span ${colSpan}`;
-        el.style.gridRow = `span ${rowSpan}`;
-
-        // Only update DB if values changed
-        if (t.history_data.w !== newW || t.history_data.colSpan !== colSpan) {
-            let history = { 
-                ...t.history_data, 
-                w: newW, 
-                h: newH, 
-                colSpan: colSpan, 
-                rowSpan: rowSpan 
-            };
-            
-            // Update local memory so render() has the right data
-            t.history_data = history;
-
-            await sb.from('trackers').update({ history_data: history }).eq('id', id);
-        }
+    toggleHeight: async function(id) {
+        const t = this.trackers.find(x => x.id === id);
+        let h = t.history_data;
+        // Cycle through 1 or 2 rows
+        let newSpan = (h.rowSpan || 1) >= 2 ? 1 : (h.rowSpan || 1) + 1;
+        
+        t.history_data.rowSpan = newSpan;
+        await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
+        this.render();
     },
 
     saveNewOrder: async function() {
