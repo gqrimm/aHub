@@ -15,7 +15,6 @@ const app = {
             this.showDashboard();
         }
 
-        // Listen for Login, Logout, and Password Reset Links
         sb.auth.onAuthStateChange(async (event, session) => {
             if (event === "PASSWORD_RECOVERY") {
                 const newPassword = prompt("Enter your new password:");
@@ -52,25 +51,17 @@ const app = {
         if (error) alert(error.message); else alert("Check email for verification!");
     },
 
-    // THIS IS THE MISSING FUNCTION
     forgotPassword: async function() {
         const email = document.getElementById('user').value;
-        if (!email) {
-            alert("Please type your email address in the Email field first.");
-            return;
-        }
+        if (!email) { alert("Please type your email address first."); return; }
         const { error } = await sb.auth.resetPasswordForEmail(email, {
             redirectTo: window.location.origin + window.location.pathname,
         });
-        if (error) alert("Rate limit or Error: " + error.message);
-        else alert("Reset link sent! Check your inbox.");
+        if (error) alert("Error: " + error.message);
+        else alert("Reset link sent!");
     },
 
-    logout: async function() { 
-        await sb.auth.signOut(); 
-        localStorage.clear(); 
-        location.reload(); 
-    },
+    logout: async function() { await sb.auth.signOut(); localStorage.clear(); location.reload(); },
 
     // --- CORE LOGIC ---
     fetchTrackers: async function() {
@@ -104,35 +95,49 @@ const app = {
         container.innerHTML = '';
         this.trackers.forEach(t => {
             const card = document.createElement('div');
-            card.className = `module type-${t.type}`;
-            if (t.type === 'bool' || t.type === 'text') card.innerHTML = this.getCalendarHTML(t);
-            else if (t.type === 'pure-text') card.innerHTML = this.getNoteHTML(t);
-            else if (t.type === 'drawing') card.innerHTML = this.getDrawingHTML(t);
+            card.className = `module sticky-note type-${t.type}`;
+            
+            // Shared Header with Pin and Close
+            let content = `
+                <div class="pin"></div>
+                <div class="card-header">
+                    <strong>${t.name}</strong>
+                    <button class="close-btn" onclick="app.deleteTracker(${t.id})">×</button>
+                </div>
+                <div class="card-body">
+            `;
+
+            if (t.type === 'bool' || t.type === 'text') content += this.getCalendarHTML(t);
+            else if (t.type === 'pure-text') content += this.getNoteHTML(t);
+            else if (t.type === 'drawing') content += this.getDrawingHTML(t);
+
+            content += `</div>`; // Close card-body
+            card.innerHTML = content;
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
         });
     },
 
     getCalendarHTML: function(t) {
-        let cal = '';
+        let cal = '<div class="calendar-grid">';
         for (let i = 13; i >= 0; i--) {
             const d = new Date(); d.setDate(d.getDate() - i);
             const k = d.toISOString().split('T')[0];
             cal += `<div class="day-box ${t.history_data[k] ? 'day-active' : ''}" onclick="app.selectedDate='${k}'; app.render()">${d.getDate()}</div>`;
         }
+        cal += '</div>';
         const val = t.history_data[this.selectedDate] || "";
-        return `<div class="card-left"><strong>${t.name}</strong><div class="calendar-grid">${cal}</div></div>
-                <div class="card-right"><small>${this.selectedDate}</small>
-                ${t.type === 'bool' ? `<button class="neal-btn ${val ? 'primary' : ''}" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` : 
-                `<input type="text" class="neal-input" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`}
-                <button onclick="app.deleteTracker(${t.id})" class="danger-text">Delete</button></div>`;
+        const action = t.type === 'bool' ? 
+            `<button class="neal-btn ${val ? 'primary' : ''}" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` :
+            `<input type="text" class="neal-input" placeholder="Type here..." value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
+        
+        return `<small>${this.selectedDate}</small>${cal}${action}`;
     },
 
-    getNoteHTML: (t) => `<div class="card-full"><div class="card-header"><strong>${t.name}</strong><button onclick="app.deleteTracker(${t.id})">×</button></div>
-                         <textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${t.history_data.note || ''}</textarea></div>`,
+    getNoteHTML: (t) => `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Write your note here...">${t.history_data.note || ''}</textarea>`,
 
-    getDrawingHTML: (t) => `<div class="card-full"><div class="card-header"><strong>${t.name}</strong><button onclick="app.deleteTracker(${t.id})">×</button></div>
-                            <canvas id="canvas-${t.id}" class="draw-canvas" width="380" height="200"></canvas></div>`,
+    getDrawingHTML: (t) => `<canvas id="canvas-${t.id}" class="draw-canvas" width="350" height="180"></canvas>
+                            <button class="neal-btn small" onclick="app.clearCanvas(${t.id})" style="margin-top:5px; font-size:10px;">Clear</button>`,
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
@@ -145,16 +150,16 @@ const app = {
         canvas.onmouseup = async () => { drawing = false; await sb.from('trackers').update({ history_data: { img: canvas.toDataURL() } }).eq('id', t.id); };
     },
 
-    deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },
-    showDashboard: function() { 
-        document.getElementById('auth-overlay').classList.add('hidden'); 
-        document.getElementById('main-content').classList.remove('hidden'); 
-        this.fetchTrackers(); 
+    clearCanvas: async function(id) {
+        const canvas = document.getElementById(`canvas-${id}`);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        await sb.from('trackers').update({ history_data: { img: null } }).eq('id', id);
     },
-    showLogin: function() { 
-        document.getElementById('auth-overlay').classList.remove('hidden'); 
-        document.getElementById('main-content').classList.add('hidden'); 
-    },
+
+    deleteTracker: async (id) => { if (confirm("Delete this sticky?")) await sb.from('trackers').delete().eq('id', id); },
+    showDashboard: function() { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); this.fetchTrackers(); },
+    showLogin: function() { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden'),
     copyInviteLink: function() { navigator.clipboard.writeText(location.origin + location.pathname + '?space=' + this.currentWorkspace); alert("Copied!"); }
