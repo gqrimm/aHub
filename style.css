@@ -32,16 +32,13 @@ body {
     border-bottom: var(--border-width) solid var(--accent);
 }
 
-/* THE GRID FIX */
-.grid-container {
-    display: grid;
-    /* Columns are at least 300px wide */
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    /* Rows are exactly 200px tall */
-    grid-auto-rows: 200px; 
-    /* This fills empty gaps automatically */
-    grid-auto-flow: row dense; 
-    gap: 20px; padding: 20px;
+/* FLEXBOX CONTAINER (Replaces Grid) */
+.flex-container {
+    display: flex;
+    flex-wrap: wrap; /* Allows items to drop to next line */
+    align-items: flex-start; /* Align to top */
+    gap: 20px;
+    padding: 20px;
 }
 
 /* --- MODULE CARD --- */
@@ -51,14 +48,13 @@ body {
     box-shadow: var(--shadow);
     display: flex; flex-direction: column;
     overflow: hidden;
-    /* Allows corner resizing */
-    resize: both; 
-    min-width: 300px; min-height: 200px;
+    resize: both; /* Free resizing */
+    min-width: 250px; min-height: 200px; /* Base size */
     position: relative;
+    /* No Grid properties here anymore */
 }
 
 .module:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0px rgba(0,0,0,1); }
-
 .module.dragging { opacity: 0.5; border: 2px dashed var(--accent); box-shadow: none; }
 
 .card-header {
@@ -67,22 +63,15 @@ body {
     border-bottom: var(--border-width) solid var(--accent);
     background: rgba(0,0,0,0.05);
     font-weight: 800; text-transform: uppercase; letter-spacing: 1px; font-size: 0.8rem;
-    cursor: grab; /* Shows this is the drag handle */
+    cursor: grab;
 }
 
 .card-header:active { cursor: grabbing; }
-
 .card-body { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 /* --- CONTROLS --- */
-#ws-manage-controls {
-    padding-left: 15px; border-left: 2px solid #ddd;
-}
-
-.neal-input {
-    border: var(--border-width) solid var(--accent); border-radius: 4px;
-    padding: 10px; background: white; font-weight: 600; outline: none;
-}
+#ws-manage-controls { padding-left: 15px; border-left: 2px solid #ddd; }
+.neal-input { border: var(--border-width) solid var(--accent); border-radius: 4px; padding: 10px; background: white; font-weight: 600; outline: none; }
 
 .neal-btn {
     border: var(--border-width) solid var(--accent); border-radius: 4px;

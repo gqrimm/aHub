@@ -13,10 +13,9 @@
     <div id="auth-overlay" class="overlay">
         <div class="auth-card">
             <h1>Welcome.</h1>
-            <p style="margin-bottom: 20px; font-size: 0.9rem; color: #666;">Sign in to your workspace</p>
             <input type="email" id="user" placeholder="Email" class="neal-input">
             <input type="password" id="pass" placeholder="Password" class="neal-input" style="margin-top:10px;">
-            <div class="auth-buttons" style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
+            <div style="margin-top:20px; display:flex; gap:10px; justify-content:center;">
                 <button onclick="app.login()" class="neal-btn primary">Login</button>
                 <button onclick="app.register()" class="neal-btn">Sign Up</button>
             </div>
@@ -35,7 +34,10 @@
                     <option value="">🏠 Private Space</option>
                 </select>
                 
-                <button onclick="app.createNewWorkspace()" class="neal-btn primary">+ New Space</button>
+                <input type="text" id="join-id-input" placeholder="Enter Space ID..." class="neal-input" style="width: 140px;">
+                <button onclick="app.joinWorkspaceManually()" class="neal-btn">Join</button>
+
+                <button onclick="app.createNewWorkspace()" class="neal-btn primary">+ New</button>
                 
                 <div id="ws-manage-controls" style="display:none; align-items:center; gap:10px;">
                     <button class="neal-btn" onclick="app.renameWorkspace()">Rename</button>
@@ -45,7 +47,7 @@
             </div>
         </section>
 
-        <main id="module-container" class="grid-container"></main>
+        <main id="module-container" class="flex-container"></main>
 
         <button class="fab" onclick="app.openModal()">+</button>
     </div>
@@ -67,6 +69,5 @@
             </div>
         </div>
     </div>
-
 </body>
 </html>

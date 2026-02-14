@@ -28,6 +28,11 @@ const app = {
         this.switchWorkspace(spaceId);
     },
 
+    joinWorkspaceManually: function() {
+        const id = document.getElementById('join-id-input').value.trim();
+        if(id) this.switchWorkspace(id);
+    },
+
     renameWorkspace: async function() {
         if (!this.currentWorkspace) return;
         const newName = prompt("New space name:");
@@ -45,7 +50,7 @@ const app = {
     copyInviteLink: function() {
         if (!this.currentWorkspace) return alert("Select a space first!");
         const url = window.location.origin + window.location.pathname + "?space=" + this.currentWorkspace;
-        navigator.clipboard.writeText(url).then(() => alert("Link copied! Share it with your team."));
+        navigator.clipboard.writeText(url).then(() => alert("Link copied! ID: " + this.currentWorkspace));
     },
 
     switchWorkspace: function(id) {
@@ -90,14 +95,13 @@ const app = {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
         if(!name) return alert("Enter a name");
-        let initialData = { order: this.trackers.length, colSpan: 1, rowSpan: 1 };
+        let initialData = { order: this.trackers.length, w: 300, h: 250 }; // Default pixel size
         if (type === 'code') initialData.code = "<h1>New Code Card</h1>";
         await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: initialData }]);
         this.closeModal();
         this.fetchTrackers(); 
     },
 
-    // --- RENDERING & INTERACTION ---
     render: function() {
         const container = document.getElementById('module-container');
         container.innerHTML = '';
@@ -107,10 +111,7 @@ const app = {
             card.className = `module type-${t.type}`;
             card.id = `card-${t.id}`;
 
-            // Apply Saved Grid Spans
-            card.style.gridColumn = `span ${h.colSpan || 1}`;
-            card.style.gridRow = `span ${h.rowSpan || 1}`;
-            // Optional: apply pixel override if available, though grid handles most of it
+            // NO GRID SPANS - Just Pixels
             if(h.w) card.style.width = h.w + 'px';
             if(h.h) card.style.height = h.h + 'px';
 
@@ -121,7 +122,7 @@ const app = {
                 </div>
                 <div class="card-body">${this.getTypeHTML(t)}</div>`;
 
-            // DRAG TO MOVE (Header Only)
+            // Drag to Move (Swapping Order)
             const header = card.querySelector('.card-header');
             header.ondragstart = (e) => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', t.id); };
             header.ondragend = () => card.classList.remove('dragging');
@@ -139,32 +140,19 @@ const app = {
             };
             card.ondrop = () => this.saveNewOrder();
 
-            // RESIZE SNAP (The Fix)
-            card.onmouseup = () => this.handleResize(t.id);
+            // RESIZE LOGIC (Pure Pixels, No Snapping)
+            card.onmouseup = async () => {
+                // Just save the raw pixels
+                if (card.offsetWidth !== h.w || card.offsetHeight !== h.h) {
+                    t.history_data.w = card.offsetWidth;
+                    t.history_data.h = card.offsetHeight;
+                    await sb.from('trackers').update({ history_data: t.history_data }).eq('id', t.id);
+                }
+            };
 
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
         });
-    },
-
-    handleResize: async function(id) {
-        const el = document.getElementById(`card-${id}`);
-        const t = this.trackers.find(x => x.id === id);
-        if (!el || !t) return;
-
-        // Calculate spans: Divide width by approx column size (300px + gap)
-        const newColSpan = Math.max(1, Math.ceil(el.offsetWidth / 300));
-        const newRowSpan = Math.max(1, Math.ceil(el.offsetHeight / 200));
-
-        if (newColSpan !== t.history_data.colSpan || newRowSpan !== t.history_data.rowSpan || el.offsetWidth !== t.history_data.w) {
-            t.history_data.colSpan = newColSpan;
-            t.history_data.rowSpan = newRowSpan;
-            t.history_data.w = el.offsetWidth;
-            t.history_data.h = el.offsetHeight;
-
-            await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
-            this.render(); // Snap to grid
-        }
     },
 
     saveNewOrder: async function() {
