@@ -86,6 +86,10 @@ const app = {
         const url = new URL(window.location);
         id ? url.searchParams.set('space', id) : url.searchParams.delete('space');
         window.history.pushState({}, '', url);
+
+        if (id) {
+            this.syncWorkspaceName();
+        }
         this.fetchTrackers();
         this.fetchWorkspaces();
     },
