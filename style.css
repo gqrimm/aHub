@@ -1,217 +1,31 @@
-:root {
-    --bg: #f5f5f5;
-    --primary: #ffde59;
-    --danger: #ff5757;
-    --border: 3px solid #000;
-    --shadow: 5px 5px 0px #000;
-    --shadow-hover: 2px 2px 0px #000;
-}
-
-* { box-sizing: border-box; }
-body { 
-    font-family: 'Inter', system-ui, -apple-system, sans-serif; 
-    background: var(--bg); 
-    margin: 0; 
-    overflow-x: hidden; 
-    color: #000;
-}
-
+:root { --bg: #f5f5f5; --primary: #ffde59; --danger: #ff5757; --border: 3px solid #000; --shadow: 5px 5px 0px #000; }
+body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; }
 .hidden { display: none !important; }
 
-/* Dashboard UI */
-.main-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    padding: 15px 30px; 
-    background: white; 
-    border-bottom: var(--border); 
-}
+/* Dashboard */
+.main-header { display: flex; justify-content: space-between; padding: 15px 30px; background: #fff; border-bottom: var(--border); }
+.workspace-bar { padding: 15px; display: flex; gap: 10px; background: #fff; border-bottom: var(--border); flex-wrap: wrap; }
+.grid-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 20px; padding: 20px; }
 
-.logo { font-weight: 900; font-size: 1.5rem; letter-spacing: -1px; }
+/* Modules */
+.module { background: #fff; border: var(--border); border-radius: 12px; box-shadow: var(--shadow); display: flex; overflow: hidden; min-height: 200px; }
+.card-left { flex: 1; padding: 15px; border-right: var(--border); background: #fafafa; }
+.card-right { width: 120px; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.card-full { width: 100%; display: flex; flex-direction: column; }
+.card-header { display: flex; justify-content: space-between; padding: 10px; background: #eee; border-bottom: var(--border); }
 
-.workspace-bar { 
-    padding: 15px 25px; 
-    display: flex; 
-    gap: 15px; 
-    align-items: center; 
-    flex-wrap: wrap; 
-    background: #fff; 
-    border-bottom: var(--border); 
-}
-
-.workspace-group { display: flex; gap: 8px; align-items: center; }
-
-/* Responsive Grid */
-.grid-container { 
-    display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); 
-    gap: 25px; 
-    padding: 25px; 
-}
-
-/* The Intuitive Split Card */
-.module {
-    background: white; 
-    border: var(--border); 
-    border-radius: 15px;
-    box-shadow: var(--shadow); 
-    display: flex; 
-    min-height: 200px; 
-    overflow: hidden;
-    transition: all 0.2s ease;
-}
-
-.card-left { 
-    flex: 1.3; 
-    padding: 18px; 
-    border-right: var(--border); 
-    background: #fafafa; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: space-between;
-    min-width: 0; 
-}
-
-.card-right { 
-    flex: 0.7; 
-    padding: 18px; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    align-items: center; 
-    background: white; 
-    min-width: 0; 
-    text-align: center;
-}
-
-/* Calendar Grid Fix */
-.calendar-grid { 
-    display: grid; 
-    grid-template-columns: repeat(7, 1fr); 
-    gap: 6px; 
-    margin-top: 15px; 
-    width: 100%; 
-}
-
-.day-box {
-    aspect-ratio: 1; 
-    border: 2px solid #ddd; 
-    border-radius: 6px;
-    font-size: 0.75rem; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    transition: 0.1s;
-    background: white;
-}
-
-.day-box:hover { border-color: #000; background: #f0f0f0; }
-.day-active { background: var(--primary) !important; border-color: #000 !important; font-weight: 900; }
-
-/* Inputs & Buttons */
-.neal-input { 
-    border: var(--border); 
-    border-radius: 8px; 
-    padding: 10px 12px; 
-    font-weight: 700; 
-    font-size: 14px; 
-    outline: none;
-    background: white;
-}
-
-.neal-input:focus { background: #fffde7; }
-.neal-input.small { width: 150px; }
-
-.neal-btn { 
-    border: var(--border); 
-    border-radius: 8px; 
-    padding: 10px 18px; 
-    font-weight: 900; 
-    font-size: 14px;
-    cursor: pointer; 
-    background: white; 
-    box-shadow: 3px 3px 0px #000;
-    transition: all 0.1s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
-}
-
-.neal-btn:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0px #000; }
-.neal-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0px #000; }
-
+/* Elements */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 10px; }
+.day-box { aspect-ratio: 1; border: 1px solid #000; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.day-active { background: var(--primary); font-weight: bold; }
+.neal-input { border: var(--border); padding: 8px; border-radius: 4px; width: 100%; }
+.neal-btn { border: var(--border); padding: 8px 15px; background: #fff; cursor: pointer; font-weight: bold; box-shadow: 2px 2px 0px #000; }
 .neal-btn.primary { background: var(--primary); }
-.neal-btn.danger { background: var(--danger); color: white; }
+.neal-btn.danger { background: var(--danger); color: #fff; }
+.note-area { flex: 1; padding: 15px; border: none; outline: none; background: #fffde7; font-size: 1.1rem; resize: none; }
+.draw-canvas { background: #fff; cursor: crosshair; touch-action: none; }
 
-/* Portal Card Style */
-.portal-card { 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    text-align: center; 
-    gap: 15px; 
-    padding: 30px;
-}
-
-/* Auth & Modals */
-.overlay { 
-    position: fixed; 
-    inset: 0; 
-    background: rgba(0,0,0,0.4); 
-    backdrop-filter: blur(4px);
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    z-index: 1000; 
-}
-
-.auth-card { 
-    background: white; 
-    padding: 40px; 
-    border: var(--border); 
-    border-radius: 24px; 
-    width: 90%;
-    max-width: 400px; 
-    text-align: center; 
-    box-shadow: var(--shadow);
-}
-
-.auth-buttons { 
-    display: flex; 
-    gap: 12px; 
-    margin-top: 20px; 
-    justify-content: center; 
-}
-
-.fab { 
-    position: fixed; 
-    bottom: 30px; 
-    right: 30px; 
-    width: 65px; 
-    height: 65px; 
-    border-radius: 50%; 
-    border: var(--border); 
-    background: var(--primary); 
-    font-size: 35px; 
-    font-weight: 900;
-    cursor: pointer; 
-    box-shadow: var(--shadow); 
-    z-index: 10; 
-    transition: 0.1s;
-}
-
-.fab:hover { transform: scale(1.05); }
-
-/* Mobile Optimizations */
-@media (max-width: 600px) {
-    .grid-container { grid-template-columns: 1fr; padding: 15px; }
-    .workspace-bar { padding: 10px; justify-content: center; }
-    .module { flex-direction: column; }
-    .card-left { border-right: none; border-bottom: var(--border); }
-    .card-right { padding: 25px; }
-    .neal-input.small { width: 100%; }
-    .workspace-group { width: 100%; justify-content: center; }
-}
+.fab { position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; border: var(--border); background: var(--primary); font-size: 30px; font-weight: bold; box-shadow: var(--shadow); cursor: pointer; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.auth-card { background: #fff; padding: 30px; border: var(--border); border-radius: 15px; width: 320px; text-align: center; }
+.danger-text { color: var(--danger); background: none; border: none; cursor: pointer; text-decoration: underline; font-size: 0.7rem; }
