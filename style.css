@@ -1,7 +1,7 @@
 :root {
     --bg: #f8f9fa;
-    --sticky-color: #fff9c4; /* Classic Sticky Yellow */
-    --border-color: #e0e0e0;
+    --sticky-color: #fff9c4;
+    --border-color: #000;
     --text-main: #333;
 }
 
@@ -9,7 +9,6 @@
 
 body { 
     font-family: 'Inter', sans-serif; 
-    /* Subtle Grid Paper Background */
     background-color: #f0f0f0;
     background-image: radial-gradient(#d1d1d1 1px, transparent 1px);
     background-size: 20px 20px;
@@ -19,7 +18,43 @@ body {
 
 .hidden { display: none !important; }
 
-/* Grid Layout: Cards next to each other */
+/* Fixed Overlay & Centering */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* Physical Card Look for Popups */
+.auth-card {
+    background: var(--sticky-color);
+    padding: 35px;
+    border-radius: 16px;
+    border: 3px solid #000; /* Bold Border */
+    box-shadow: 10px 10px 0px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+/* Dashboard Header */
+.main-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    padding: 15px 30px; 
+    background: white; 
+    border-bottom: 2px solid #000; 
+}
+
+/* Grid Layout: Side-by-Side */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -27,30 +62,23 @@ body {
     padding: 30px;
 }
 
-/* The Modern Sticky Card */
+/* Individual Sticky Card */
 .module {
     background: var(--sticky-color);
-    border-radius: 12px; /* Rounded edges */
-    border: 1px solid rgba(0,0,0,0.05);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    border: 1px solid rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
     min-height: 280px;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.module:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
 }
 
 .card-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     padding: 15px 20px;
     border-bottom: 1px solid rgba(0,0,0,0.05);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .card-body {
@@ -60,52 +88,43 @@ body {
     flex-direction: column;
 }
 
-/* Controls */
+/* Form Elements */
 .neal-input {
-    border: 1px solid #ccc;
+    width: 100%;
+    border: 2px solid #000;
     border-radius: 8px;
-    padding: 10px;
+    padding: 12px;
     background: white;
     margin-bottom: 10px;
-    outline: none;
+    font-size: 1rem;
 }
 
 .neal-btn {
-    border: none;
+    border: 2px solid #000;
     border-radius: 8px;
-    padding: 10px 15px;
+    padding: 10px 20px;
     background: #fff;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    transition: background 0.2s;
+    box-shadow: 4px 4px 0px #000;
+    transition: all 0.1s;
 }
 
-.neal-btn:hover { background: #fefefe; }
-.neal-btn.primary { background: #333; color: #fff; }
-
-/* Calendar Style */
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 6px;
-    margin-bottom: 15px;
+.neal-btn:active {
+    box-shadow: 0px 0px 0px #000;
+    transform: translate(4px, 4px);
 }
 
-.day-box {
-    aspect-ratio: 1;
-    border-radius: 4px;
-    background: rgba(255,255,255,0.5);
-    border: 1px solid rgba(0,0,0,0.05);
+.neal-btn.primary { background: #000; color: #fff; }
+
+.auth-buttons {
     display: flex;
-    align-items: center;
+    gap: 10px;
     justify-content: center;
-    font-size: 0.8rem;
-    cursor: pointer;
+    margin-top: 10px;
 }
 
-.day-active { background: #333 !important; color: #fff; }
-
+/* Sticky Note Content */
 .note-area {
     width: 100%;
     height: 100%;
@@ -114,13 +133,46 @@ body {
     resize: none;
     font-size: 1.1rem;
     outline: none;
-    line-height: 1.5;
 }
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+}
+
+.day-box {
+    aspect-ratio: 1;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.day-active { background: #000 !important; color: #fff; }
 
 .draw-canvas {
     background: white;
     border-radius: 8px;
-    border: 1px solid #eee;
-    cursor: crosshair;
+    border: 1px solid #000;
     width: 100%;
+}
+
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 30px;
+    cursor: pointer;
+    box-shadow: 4px 4px 10px rgba(0,0,0,0.3);
 }

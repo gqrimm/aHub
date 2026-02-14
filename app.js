@@ -17,12 +17,8 @@ const app = {
 
         sb.auth.onAuthStateChange(async (event, session) => {
             if (event === "PASSWORD_RECOVERY") {
-                const newPassword = prompt("Enter your new password:");
-                if (newPassword) {
-                    const { error } = await sb.auth.updateUser({ password: newPassword });
-                    if (error) alert("Error: " + error.message);
-                    else alert("Password updated! You can now log in.");
-                }
+                const newPassword = prompt("Enter new password:");
+                if (newPassword) await sb.auth.updateUser({ password: newPassword });
             }
             if (session) {
                 this.user = session.user;
@@ -36,7 +32,6 @@ const app = {
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
-    // --- AUTH FUNCTIONS ---
     login: async function() {
         const email = document.getElementById('user').value;
         const password = document.getElementById('pass').value;
@@ -48,22 +43,18 @@ const app = {
         const email = document.getElementById('user').value;
         const password = document.getElementById('pass').value;
         const { error } = await sb.auth.signUp({ email, password });
-        if (error) alert(error.message); else alert("Check email for verification!");
+        if (error) alert(error.message); else alert("Check your email!");
     },
 
     forgotPassword: async function() {
         const email = document.getElementById('user').value;
-        if (!email) { alert("Please type your email address first."); return; }
-        const { error } = await sb.auth.resetPasswordForEmail(email, {
-            redirectTo: window.location.origin + window.location.pathname,
-        });
-        if (error) alert("Error: " + error.message);
-        else alert("Reset link sent!");
+        if (!email) return alert("Enter email first");
+        await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+        alert("Reset link sent!");
     },
 
-    logout: async function() { await sb.auth.signOut(); localStorage.clear(); location.reload(); },
+    logout: async function() { await sb.auth.signOut(); location.reload(); },
 
-    // --- CORE LOGIC ---
     fetchTrackers: async function() {
         if (!this.user) return;
         let query = sb.from('trackers').select('*');
@@ -77,7 +68,9 @@ const app = {
     createTracker: async function() {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
-        await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: {} }]);
+        await sb.from('trackers').insert([{ 
+            name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: {} 
+        }]);
         this.closeModal();
     },
 
@@ -88,105 +81,65 @@ const app = {
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
     },
 
-    // --- VIEW RENDERING ---
-   render: function() {
+    render: function() {
         const container = document.getElementById('module-container');
-        if (!container) return;
         container.innerHTML = '';
-        
         this.trackers.forEach(t => {
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
-            
-            let html = `
+            card.innerHTML = `
                 <div class="card-header">
                     <span>${t.name}</span>
-                    <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer; opacity:0.5;">✕</button>
+                    <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
                 <div class="card-body">
-            `;
-
-            if (t.type === 'bool' || t.type === 'text') {
-                html += this.getCalendarHTML(t);
-            } else if (t.type === 'pure-text') {
-                html += `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Type a note...">${t.history_data.note || ''}</textarea>`;
-            } else if (t.type === 'drawing') {
-                html += `
-                    <canvas id="canvas-${t.id}" class="draw-canvas" width="350" height="180"></canvas>
-                    <div style="margin-top:10px;">
-                        <button class="neal-btn" style="font-size: 11px;" onclick="app.clearCanvas(${t.id})">Clear Board</button>
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
-            card.innerHTML = html;
+                    ${this.getTypeHTML(t)}
+                </div>`;
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
         });
     },
 
-    clearCanvas: async function(id) {
-        const canvas = document.getElementById(`canvas-${id}`);
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Find the tracker and remove image data
-        const t = this.trackers.find(x => x.id === id);
-        let history = { ...t.history_data };
-        delete history.img;
-        
-        const { error } = await sb.from('trackers').update({ history_data: history }).eq('id', id);
-        if (error) console.error("Error clearing canvas:", error);
-    },
-
-    getCalendarHTML: function(t) {
-        let cal = '<div class="calendar-grid">';
-        for (let i = 13; i >= 0; i--) {
-            const d = new Date(); d.setDate(d.getDate() - i);
-            const k = d.toISOString().split('T')[0];
-            cal += `<div class="day-box ${t.history_data[k] ? 'day-active' : ''}" onclick="app.selectedDate='${k}'; app.render()">${d.getDate()}</div>`;
+    getTypeHTML: function(t) {
+        if (t.type === 'bool' || t.type === 'text') {
+            let cal = '<div class="calendar-grid">';
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date(); d.setDate(d.getDate() - i);
+                const k = d.toISOString().split('T')[0];
+                cal += `<div class="day-box ${t.history_data[k] ? 'day-active' : ''}" onclick="app.selectedDate='${k}'; app.render()">${d.getDate()}</div>`;
+            }
+            cal += '</div>';
+            const val = t.history_data[this.selectedDate] || "";
+            const input = t.type === 'bool' ? 
+                `<button class="neal-btn ${val ? 'primary' : ''}" style="width:100%; margin-top:10px;" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` :
+                `<input type="text" class="neal-input" style="margin-top:10px;" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
+            return `<small>${this.selectedDate}</small>${cal}${input}`;
         }
-        cal += '</div>';
-        
-        const val = t.history_data[this.selectedDate] || "";
-        const input = t.type === 'bool' ? 
-            `<button class="neal-btn ${val ? 'primary' : ''}" style="width:100%" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓ Done' : 'Mark Done'}</button>` :
-            `<input type="text" class="neal-input" style="width:100%" placeholder="Value..." value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
-        
-        return `<div style="margin-bottom:10px; font-size:12px; color:#666;">${this.selectedDate}</div>${cal}${input}`;
+        if (t.type === 'pure-text') return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${t.history_data.note || ''}</textarea>`;
+        if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas" width="310" height="150"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
     },
-    
-    getNoteHTML: (t) => `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Write your note here...">${t.history_data.note || ''}</textarea>`,
-
-    getDrawingHTML: (t) => `<canvas id="canvas-${t.id}" class="draw-canvas" width="350" height="180"></canvas>
-                            <button class="neal-btn small" onclick="app.clearCanvas(${t.id})" style="margin-top:5px; font-size:10px;">Clear</button>`,
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
-        if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = t.history_data.img; }
-        let drawing = false;
-        canvas.onmousedown = (e) => { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
-        canvas.onmousemove = (e) => { if (drawing) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
-        canvas.onmouseup = async () => { drawing = false; await sb.from('trackers').update({ history_data: { img: canvas.toDataURL() } }).eq('id', t.id); };
+        if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img,0,0); img.src = t.history_data.img; }
+        let draw = false;
+        canvas.onmousedown = (e) => { draw = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
+        canvas.onmousemove = (e) => { if(draw) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
+        canvas.onmouseup = async () => { draw = false; await sb.from('trackers').update({ history_data: { ...t.history_data, img: canvas.toDataURL() } }).eq('id', t.id); };
     },
 
     clearCanvas: async function(id) {
         const canvas = document.getElementById(`canvas-${id}`);
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
         await sb.from('trackers').update({ history_data: { img: null } }).eq('id', id);
     },
 
-    deleteTracker: async (id) => { if (confirm("Delete this sticky?")) await sb.from('trackers').delete().eq('id', id); },
+    deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },
     showDashboard: function() { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); this.fetchTrackers(); },
     showLogin: function() { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
-    closeModal: () => document.getElementById('modal-overlay').classList.add('hidden'),
-    copyInviteLink: function() { navigator.clipboard.writeText(location.origin + location.pathname + '?space=' + this.currentWorkspace); alert("Copied!"); }
+    closeModal: () => document.getElementById('modal-overlay').classList.add('hidden')
 };
 
 app.init();

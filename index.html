@@ -20,27 +20,23 @@
                 <button onclick="app.login()" class="neal-btn primary">Login</button>
                 <button onclick="app.register()" class="neal-btn">Sign Up</button>
             </div>
-            <button onclick="app.forgotPassword()" style="margin-top:15px; background:none; border:none; text-decoration:underline; cursor:pointer; font-size:0.8rem;">Forgot Password?</button>
+            <button onclick="app.forgotPassword()" style="margin-top:20px; background:none; border:none; text-decoration:underline; cursor:pointer; font-size:0.8rem;">Forgot Password?</button>
         </div>
     </div>
 
     <div id="main-content" class="hidden">
         <header class="main-header">
-            <div class="logo">aHub</div>
-            <button onclick="app.logout()" class="neal-btn danger">Logout</button>
+            <div class="logo" style="font-weight: 900; font-size: 1.5rem;">aHub</div>
+            <button onclick="app.logout()" class="neal-btn">Logout</button>
         </header>
 
-        <section class="workspace-bar">
-            <div class="workspace-group">
-                <input type="text" id="join-work-id" placeholder="Space ID" class="neal-input small">
-                <button onclick="app.saveWorkspaceToBookmarks(document.getElementById('join-work-id').value)" class="neal-btn">Join</button>
-            </div>
-            <select id="workspace-dropdown" class="neal-input" onchange="app.switchWorkspace(this.value)">
+        <section class="workspace-bar" style="padding: 20px; background: #fff; border-bottom: 1px solid #000; display: flex; gap: 15px; align-items: center;">
+            <input type="text" id="join-work-id" placeholder="Space ID" class="neal-input" style="width: 150px; margin-bottom:0;">
+            <button onclick="app.switchWorkspace(document.getElementById('join-work-id').value)" class="neal-btn">Join</button>
+            <select id="workspace-dropdown" class="neal-input" style="width: 200px; margin-bottom:0;" onchange="app.switchWorkspace(this.value)">
                 <option value="">🏠 Private Space</option>
             </select>
-            <div class="workspace-group">
-                <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
-            </div>
+            <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
         </section>
 
         <main id="module-container" class="grid-container"></main>
