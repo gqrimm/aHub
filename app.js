@@ -105,8 +105,11 @@ const app = {
             card.id = `card-${t.id}`;
             card.draggable = true;
             
+            // Inside app.render() trackers loop:
             if (t.history_data.w) card.style.width = t.history_data.w + 'px';
             if (t.history_data.h) card.style.height = t.history_data.h + 'px';
+            if (t.history_data.gridSpan) card.style.gridColumn = t.history_data.gridSpan; // Add this
+            
 
             card.innerHTML = `
                 <div class="card-header">
@@ -179,8 +182,24 @@ const app = {
     saveSize: async function(id) {
         const el = document.getElementById(`card-${id}`);
         const t = this.trackers.find(x => x.id === id);
-        if (t.history_data.w !== el.offsetWidth || t.history_data.h !== el.offsetHeight) {
-            let history = { ...t.history_data, w: el.offsetWidth, h: el.offsetHeight };
+        if (!el || !t) return;
+
+        const newW = el.offsetWidth;
+        const newH = el.offsetHeight;
+
+        // Calculate Grid Spanning
+        // If the card is wider than 650px, tell it to span 2 columns
+        const colSpan = newW > 650 ? 'span 2' : 'span 1';
+        el.style.gridColumn = colSpan;
+
+        if (t.history_data.w !== newW || t.history_data.h !== newH) {
+            let history = { 
+                ...t.history_data, 
+                w: newW, 
+                h: newH, 
+                gridSpan: colSpan // Save this so it persists
+            };
+            
             await sb.from('trackers').update({ history_data: history }).eq('id', id);
         }
     },
