@@ -120,15 +120,23 @@ const app = {
             // Drag & Drop Handlers
             card.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); card.classList.add('dragging'); };
             card.ondragend = () => card.classList.remove('dragging');
+            // Inside app.render() -> trackers.forEach loop
             card.ondragover = (e) => {
                 e.preventDefault();
                 const draggingCard = document.querySelector('.dragging');
-                const cards = [...container.querySelectorAll('.module:not(.dragging)')];
-                const nextCard = cards.find(c => {
-                    const rect = c.getBoundingClientRect();
-                    return e.clientX < rect.left + rect.width / 2 && e.clientY < rect.top + rect.height / 2;
+                const container = document.getElementById('module-container');
+                
+                // Get all cards except the one we are dragging
+                const siblings = [...container.querySelectorAll('.module:not(.dragging)')];
+
+                // Find the sibling that we are dragging "over"
+                const nextSibling = siblings.find(sibling => {
+                    const rect = sibling.getBoundingClientRect();
+                    // Check if the mouse is past the midpoint of the sibling card
+                    return e.clientY <= rect.top + rect.height / 2;
                 });
-                nextCard ? container.insertBefore(draggingCard, nextCard) : container.appendChild(draggingCard);
+
+                container.insertBefore(draggingCard, nextSibling);
             };
             card.ondrop = () => this.saveNewOrder();
             card.onmouseup = () => this.saveSize(t.id);
