@@ -89,19 +89,19 @@ const app = {
     },
 
     // --- VIEW RENDERING ---
-    render: function() {
+   render: function() {
         const container = document.getElementById('module-container');
         if (!container) return;
         container.innerHTML = '';
+        
         this.trackers.forEach(t => {
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
             
-            // Shared Sticky Header
             let html = `
                 <div class="card-header">
-                    <strong>${t.name}</strong>
-                    <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer; font-weight:bold;">×</button>
+                    <span>${t.name}</span>
+                    <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer; opacity:0.5;">✕</button>
                 </div>
                 <div class="card-body">
             `;
@@ -109,11 +109,13 @@ const app = {
             if (t.type === 'bool' || t.type === 'text') {
                 html += this.getCalendarHTML(t);
             } else if (t.type === 'pure-text') {
-                html += `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Write something...">${t.history_data.note || ''}</textarea>`;
+                html += `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Type a note...">${t.history_data.note || ''}</textarea>`;
             } else if (t.type === 'drawing') {
                 html += `
-                    <canvas id="canvas-${t.id}" class="draw-canvas" width="380" height="200"></canvas>
-                    <button class="neal-btn" style="margin-top:10px; font-size: 10px;" onclick="app.clearCanvas(${t.id})">CLEAR BOARD</button>
+                    <canvas id="canvas-${t.id}" class="draw-canvas" width="350" height="180"></canvas>
+                    <div style="margin-top:10px;">
+                        <button class="neal-btn" style="font-size: 11px;" onclick="app.clearCanvas(${t.id})">Clear Board</button>
+                    </div>
                 `;
             }
 
@@ -124,20 +126,21 @@ const app = {
         });
     },
 
-    // NEW: Clear Canvas Function
     clearCanvas: async function(id) {
         const canvas = document.getElementById(`canvas-${id}`);
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Update Database to remove the image string
+        // Find the tracker and remove image data
         const t = this.trackers.find(x => x.id === id);
         let history = { ...t.history_data };
         delete history.img;
-        await sb.from('trackers').update({ history_data: history }).eq('id', id);
+        
+        const { error } = await sb.from('trackers').update({ history_data: history }).eq('id', id);
+        if (error) console.error("Error clearing canvas:", error);
     },
-    
+
     getCalendarHTML: function(t) {
         let cal = '<div class="calendar-grid">';
         for (let i = 13; i >= 0; i--) {
@@ -146,14 +149,15 @@ const app = {
             cal += `<div class="day-box ${t.history_data[k] ? 'day-active' : ''}" onclick="app.selectedDate='${k}'; app.render()">${d.getDate()}</div>`;
         }
         cal += '</div>';
-        const val = t.history_data[this.selectedDate] || "";
-        const action = t.type === 'bool' ? 
-            `<button class="neal-btn ${val ? 'primary' : ''}" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` :
-            `<input type="text" class="neal-input" placeholder="Type here..." value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
         
-        return `<small>${this.selectedDate}</small>${cal}${action}`;
+        const val = t.history_data[this.selectedDate] || "";
+        const input = t.type === 'bool' ? 
+            `<button class="neal-btn ${val ? 'primary' : ''}" style="width:100%" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓ Done' : 'Mark Done'}</button>` :
+            `<input type="text" class="neal-input" style="width:100%" placeholder="Value..." value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
+        
+        return `<div style="margin-bottom:10px; font-size:12px; color:#666;">${this.selectedDate}</div>${cal}${input}`;
     },
-
+    
     getNoteHTML: (t) => `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Write your note here...">${t.history_data.note || ''}</textarea>`,
 
     getDrawingHTML: (t) => `<canvas id="canvas-${t.id}" class="draw-canvas" width="350" height="180"></canvas>
