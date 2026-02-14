@@ -15,16 +15,14 @@ const app = {
             if (session) { 
                 this.user = session.user; 
 
-                // Check if user is arriving via an invite link
                 const urlParams = new URLSearchParams(window.location.search);
                 const inviteId = urlParams.get('space');
                 
                 if (inviteId) {
-                    // Wait for the membership to be saved in DB before showing dashboard
+                    // If they have a space ID in the URL, make it permanent!
                     await this.makeMembershipPermanent(inviteId);
                     this.currentWorkspace = inviteId;
                 } else {
-                    // Otherwise, load their last used workspace from local storage
                     this.currentWorkspace = localStorage.getItem('active_workspace') || null;
                 }
 
@@ -112,24 +110,23 @@ const app = {
     makeMembershipPermanent: async function(spaceId) {
         if (!this.user || !spaceId) return;
 
-        // 1. Check if the link between this user and this space already exists
+        // Check if they already have this workspace in their dropdown
         const { data: existing } = await sb.from('user_workspaces')
             .select('*')
             .eq('user_id', this.user.id)
             .eq('workspace_id', spaceId);
 
-        // 2. If it doesn't exist, create it (make it permanent)
         if (!existing || existing.length === 0) {
-            const { error } = await sb.from('user_workspaces').insert([
+            // This is the part that actually saves it to their account
+            await sb.from('user_workspaces').insert([
                 { 
                     user_id: this.user.id, 
                     workspace_id: spaceId, 
                     workspace_name: "Joined Space" 
                 }
             ]);
-            
-            if (error) console.error("Error joining space:", error);
-            else console.log("Space added to your dropdown permanently.");
+            // Refresh the dropdown immediately so they see the new name
+            await this.fetchWorkspaces();
         }
     },
 
