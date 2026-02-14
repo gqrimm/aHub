@@ -30,12 +30,19 @@
             <button onclick="app.logout()" class="neal-btn">Logout</button>
         </header>
 
-        <section class="workspace-bar" style="padding: 20px; background: #fff; border-bottom: 1px solid #000; display: flex; gap: 15px; align-items: center;">
-            <input type="text" id="join-work-id" placeholder="Space ID" class="neal-input" style="width: 150px; margin-bottom:0;">
-            <button onclick="app.switchWorkspace(document.getElementById('join-work-id').value)" class="neal-btn">Join</button>
-            <select id="workspace-dropdown" class="neal-input" style="width: 200px; margin-bottom:0;" onchange="app.switchWorkspace(this.value)">
-                <option value="">🏠 Private Space</option>
-            </select>
+        <section class="workspace-bar" style="padding: 20px; background: #fff; border-bottom: 1px solid #000; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="join-work-id" placeholder="Space ID" class="neal-input" style="width: 140px; margin-bottom:0;">
+                <button onclick="app.joinWorkspace(document.getElementById('join-work-id').value)" class="neal-btn">Join</button>
+            </div>
+            
+            <div style="display:flex; gap:10px; align-items:center;">
+                <select id="workspace-dropdown" class="neal-input" style="width: 200px; margin-bottom:0;" onchange="app.switchWorkspace(this.value)">
+                    <option value="">🏠 Private Space</option>
+                </select>
+                <button onclick="app.createNewWorkspace()" class="neal-btn primary">+ New Space</button>
+            </div>
+
             <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
         </section>
 

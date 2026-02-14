@@ -5,6 +5,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const app = {
     user: null,
     trackers: [],
+    workspaces: [],
     currentWorkspace: new URLSearchParams(window.location.search).get('space') || localStorage.getItem('active_workspace') || null,
     selectedDate: new Date().toISOString().split('T')[0],
 
@@ -16,10 +17,6 @@ const app = {
         }
 
         sb.auth.onAuthStateChange(async (event, session) => {
-            if (event === "PASSWORD_RECOVERY") {
-                const newPassword = prompt("Enter new password:");
-                if (newPassword) await sb.auth.updateUser({ password: newPassword });
-            }
             if (session) {
                 this.user = session.user;
                 this.showDashboard();
@@ -32,34 +29,75 @@ const app = {
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
-    login: async function() {
-        const email = document.getElementById('user').value;
-        const password = document.getElementById('pass').value;
-        const { error } = await sb.auth.signInWithPassword({ email, password });
+    // --- WORKSPACE LOGIC ---
+    createNewWorkspace: async function() {
+        const name = prompt("Enter Space Name:");
+        if (!name) return;
+        const spaceId = Math.random().toString(36).substring(2, 9); // Random ID
+        
+        const { error } = await sb.from('user_workspaces').insert([
+            { user_id: this.user.id, workspace_id: spaceId, workspace_name: name }
+        ]);
+
         if (error) alert(error.message);
+        else {
+            alert(`Space Created! ID: ${spaceId}`);
+            this.switchWorkspace(spaceId);
+        }
     },
 
-    register: async function() {
-        const email = document.getElementById('user').value;
-        const password = document.getElementById('pass').value;
-        const { error } = await sb.auth.signUp({ email, password });
-        if (error) alert(error.message); else alert("Check your email!");
+    fetchWorkspaces: async function() {
+        const { data } = await sb.from('user_workspaces').select('*').eq('user_id', this.user.id);
+        this.workspaces = data || [];
+        const dropdown = document.getElementById('workspace-dropdown');
+        dropdown.innerHTML = '<option value="">🏠 Private Space</option>';
+        this.workspaces.forEach(ws => {
+            const opt = document.createElement('option');
+            opt.value = ws.workspace_id;
+            opt.textContent = `🚀 ${ws.workspace_name}`;
+            if (this.currentWorkspace === ws.workspace_id) opt.selected = true;
+            dropdown.appendChild(opt);
+        });
     },
 
-    forgotPassword: async function() {
-        const email = document.getElementById('user').value;
-        if (!email) return alert("Enter email first");
-        await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
-        alert("Reset link sent!");
+    joinWorkspace: async function(id) {
+        if (!id) return;
+        const name = prompt("Name this space for your list:");
+        const { error } = await sb.from('user_workspaces').insert([
+            { user_id: this.user.id, workspace_id: id, workspace_name: name || id }
+        ]);
+        if (error) alert("Already joined or error: " + error.message);
+        this.switchWorkspace(id);
     },
 
-    logout: async function() { await sb.auth.signOut(); location.reload(); },
+    switchWorkspace: function(id) {
+        this.currentWorkspace = id || null;
+        if (id) localStorage.setItem('active_workspace', id);
+        else localStorage.removeItem('active_workspace');
+        
+        // Update URL without reloading
+        const url = new URL(window.location);
+        id ? url.searchParams.set('space', id) : url.searchParams.delete('space');
+        window.history.pushState({}, '', url);
+        
+        this.fetchTrackers();
+        this.fetchWorkspaces();
+    },
 
+    copyInviteLink: function() {
+        if (!this.currentWorkspace) return alert("You are in a Private Space. Create a shared Space first!");
+        const link = window.location.origin + window.location.pathname + '?space=' + this.currentWorkspace;
+        navigator.clipboard.writeText(link);
+        alert("Invite link copied!");
+    },
+
+    // --- TRACKER LOGIC ---
     fetchTrackers: async function() {
         if (!this.user) return;
         let query = sb.from('trackers').select('*');
         if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
         else query = query.eq('user_id', this.user.id).is('workspace_id', null);
+        
         const { data } = await query.order('created_at', { ascending: true });
         this.trackers = data || [];
         this.render();
@@ -74,12 +112,23 @@ const app = {
         this.closeModal();
     },
 
-    logValue: async function(id, key, val) {
-        const t = this.trackers.find(x => x.id === id);
-        let history = { ...t.history_data };
-        t.type === 'bool' ? history[key] = !history[key] : history[key] = val;
-        await sb.from('trackers').update({ history_data: history }).eq('id', id);
+    // ... (rest of rendering, login, initCanvas, and deleteTracker logic from previous step)
+    
+    login: async function() {
+        const email = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if (error) alert(error.message);
     },
+
+    register: async function() {
+        const email = document.getElementById('user').value;
+        const password = document.getElementById('pass').value;
+        const { error } = await sb.auth.signUp({ email, password });
+        if (error) alert(error.message); else alert("Check email!");
+    },
+
+    logout: async function() { await sb.auth.signOut(); location.reload(); },
 
     render: function() {
         const container = document.getElementById('module-container');
@@ -119,6 +168,13 @@ const app = {
         if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas" width="310" height="150"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
     },
 
+    logValue: async function(id, key, val) {
+        const t = this.trackers.find(x => x.id === id);
+        let history = { ...t.history_data };
+        t.type === 'bool' ? history[key] = !history[key] : history[key] = val;
+        await sb.from('trackers').update({ history_data: history }).eq('id', id);
+    },
+
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
         const ctx = canvas.getContext('2d');
@@ -136,7 +192,12 @@ const app = {
     },
 
     deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },
-    showDashboard: function() { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); this.fetchTrackers(); },
+    showDashboard: function() { 
+        document.getElementById('auth-overlay').classList.add('hidden'); 
+        document.getElementById('main-content').classList.remove('hidden'); 
+        this.fetchWorkspaces();
+        this.fetchTrackers(); 
+    },
     showLogin: function() { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden')

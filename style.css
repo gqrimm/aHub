@@ -18,7 +18,6 @@ body {
 
 .hidden { display: none !important; }
 
-/* Fixed Overlay & Centering */
 .overlay {
     position: fixed;
     top: 0;
@@ -32,19 +31,17 @@ body {
     z-index: 1000;
 }
 
-/* Physical Card Look for Popups */
 .auth-card {
     background: var(--sticky-color);
     padding: 35px;
     border-radius: 16px;
-    border: 3px solid #000; /* Bold Border */
+    border: 3px solid #000;
     box-shadow: 10px 10px 0px rgba(0,0,0,0.1);
     width: 100%;
     max-width: 400px;
     text-align: center;
 }
 
-/* Dashboard Header */
 .main-header { 
     display: flex; 
     justify-content: space-between; 
@@ -54,7 +51,6 @@ body {
     border-bottom: 2px solid #000; 
 }
 
-/* Grid Layout: Side-by-Side */
 .grid-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -62,7 +58,6 @@ body {
     padding: 30px;
 }
 
-/* Individual Sticky Card */
 .module {
     background: var(--sticky-color);
     border-radius: 12px;
@@ -88,31 +83,29 @@ body {
     flex-direction: column;
 }
 
-/* Form Elements */
 .neal-input {
-    width: 100%;
     border: 2px solid #000;
     border-radius: 8px;
-    padding: 12px;
+    padding: 10px;
     background: white;
     margin-bottom: 10px;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .neal-btn {
     border: 2px solid #000;
     border-radius: 8px;
-    padding: 10px 20px;
+    padding: 8px 16px;
     background: #fff;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 4px 4px 0px #000;
+    box-shadow: 3px 3px 0px #000;
     transition: all 0.1s;
 }
 
 .neal-btn:active {
     box-shadow: 0px 0px 0px #000;
-    transform: translate(4px, 4px);
+    transform: translate(3px, 3px);
 }
 
 .neal-btn.primary { background: #000; color: #fff; }
@@ -124,7 +117,6 @@ body {
     margin-top: 10px;
 }
 
-/* Sticky Note Content */
 .note-area {
     width: 100%;
     height: 100%;
