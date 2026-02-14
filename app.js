@@ -180,14 +180,24 @@ const app = {
         this.trackers.forEach(t => {
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
+            card.id = `card-${t.id}`;
+            
+            // APPLY SAVED SIZE
+            if (t.history_data.w) card.style.width = t.history_data.w + 'px';
+            if (t.history_data.h) card.style.height = t.history_data.h + 'px';
+
             card.innerHTML = `
                 <div class="card-header">
                     <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
-                <div class="card-body" style="height: 100%; display: flex; flex-direction: column;">
+                <div class="card-body" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
                     ${this.getTypeHTML(t)}
                 </div>`;
+                
+            // SAVE SIZE ON MOUSE UP
+            card.onmouseup = () => this.saveSize(t.id);
+
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
         });
@@ -272,6 +282,26 @@ const app = {
         document.getElementById('close-editor').onclick = () => {
             document.body.removeChild(editorDiv);
         };
+    },
+
+    saveSize: async function(id) {
+        const el = document.getElementById(`card-${id}`);
+        const t = this.trackers.find(x => x.id === id);
+        
+        const newW = el.offsetWidth;
+        const newH = el.offsetHeight;
+
+        // Only update if the size actually changed to save database calls
+        if (t.history_data.w !== newW || t.history_data.h !== newH) {
+            let history = { ...t.history_data, w: newW, h: newH };
+            
+            // Update local data so it doesn't "jump" on next render
+            t.history_data.w = newW;
+            t.history_data.h = newH;
+
+            await sb.from('trackers').update({ history_data: history }).eq('id', id);
+            console.log(`Saved size for ${t.name}: ${newW}x${newH}`);
+        }
     },
 
     initCanvas: function(t) {

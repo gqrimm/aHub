@@ -46,26 +46,25 @@ body {
 
 .grid-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 30px;
     padding: 30px;
-    align-items: start;
+    align-items: start; /* THIS IS KEY: prevents cards from stretching to match row height */
 }
 
 /* --- THE MODULE (THE STICKY NOTE) --- */
+/* Update your .module class in your CSS file */
 .module {
     background: var(--sticky-color);
     border: var(--border-width) solid var(--accent);
-    border-radius: 4px; /* Sharper edges for neubrutalism */
+    border-radius: 4px;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    
-    /* RESIZING LOGIC */
     resize: both; 
-    overflow: auto; /* Required for native resize handle */
-    min-height: 300px;
-    min-width: 320px;
+    overflow: auto; /* Required for the resize handle to show */
+    min-height: 200px;
+    min-width: 250px;
     position: relative;
 }
 
