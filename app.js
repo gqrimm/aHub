@@ -10,14 +10,43 @@ const app = {
     selectedDate: new Date().toISOString().split('T')[0],
 
     init: async function() {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session) { this.user = session.user; this.showDashboard(); }
-        sb.auth.onAuthStateChange(async (event, session) => {
-            if (session) { this.user = session.user; this.showDashboard(); }
-            else { this.user = null; this.showLogin(); }
-        });
-        sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
-    },
+            const { data: { session } } = await sb.auth.getSession();
+            
+            if (session) { 
+                this.user = session.user; 
+
+                // Check if user is arriving via an invite link
+                const urlParams = new URLSearchParams(window.location.search);
+                const inviteId = urlParams.get('space');
+                
+                if (inviteId) {
+                    // Wait for the membership to be saved in DB before showing dashboard
+                    await this.makeMembershipPermanent(inviteId);
+                    this.currentWorkspace = inviteId;
+                } else {
+                    // Otherwise, load their last used workspace from local storage
+                    this.currentWorkspace = localStorage.getItem('active_workspace') || null;
+                }
+
+                this.showDashboard(); 
+            }
+
+            sb.auth.onAuthStateChange(async (event, session) => {
+                if (session) { 
+                    this.user = session.user; 
+                    this.showDashboard(); 
+                } else { 
+                    this.user = null; 
+                    this.showLogin(); 
+                }
+            });
+
+            sb.channel('db-changes').on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'trackers' 
+            }, () => this.fetchTrackers()).subscribe();
+        },
 
     // --- WORKSPACE LOGIC ---
     createNewWorkspace: async function() {
@@ -78,6 +107,30 @@ const app = {
         });
         const controls = document.getElementById('ws-manage-controls');
         if (controls) controls.style.display = this.currentWorkspace ? 'flex' : 'none';
+    },
+
+    makeMembershipPermanent: async function(spaceId) {
+        if (!this.user || !spaceId) return;
+
+        // 1. Check if the link between this user and this space already exists
+        const { data: existing } = await sb.from('user_workspaces')
+            .select('*')
+            .eq('user_id', this.user.id)
+            .eq('workspace_id', spaceId);
+
+        // 2. If it doesn't exist, create it (make it permanent)
+        if (!existing || existing.length === 0) {
+            const { error } = await sb.from('user_workspaces').insert([
+                { 
+                    user_id: this.user.id, 
+                    workspace_id: spaceId, 
+                    workspace_name: "Joined Space" 
+                }
+            ]);
+            
+            if (error) console.error("Error joining space:", error);
+            else console.log("Space added to your dropdown permanently.");
+        }
     },
 
     // --- TRACKER LOGIC ---
