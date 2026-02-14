@@ -11,22 +11,11 @@ const app = {
 
     init: async function() {
         const { data: { session } } = await sb.auth.getSession();
-        if (session) {
-            this.user = session.user;
-            this.showDashboard();
-        }
-
+        if (session) { this.user = session.user; this.showDashboard(); }
         sb.auth.onAuthStateChange(async (event, session) => {
-            if (session) {
-                this.user = session.user;
-                this.showDashboard();
-            } else {
-                this.user = null;
-                this.showLogin();
-            }
+            if (session) { this.user = session.user; this.showDashboard(); }
+            else { this.user = null; this.showLogin(); }
         });
-
-        // Real-time listener for database changes
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
@@ -35,40 +24,22 @@ const app = {
         const name = prompt("Enter Space Name:");
         if (!name) return;
         const spaceId = Math.random().toString(36).substring(2, 9);
-        const { error } = await sb.from('user_workspaces').insert([{ user_id: this.user.id, workspace_id: spaceId, workspace_name: name }]);
-        if (error) alert(error.message);
-        else this.switchWorkspace(spaceId);
+        await sb.from('user_workspaces').insert([{ user_id: this.user.id, workspace_id: spaceId, workspace_name: name }]);
+        this.switchWorkspace(spaceId);
     },
 
-    // --- WORKSPACE MANAGEMENT ---
     renameWorkspace: async function() {
-        if (!this.currentWorkspace) return alert("Select a space to rename it.");
-        const newName = prompt("Enter new space name:");
+        if (!this.currentWorkspace) return alert("Select a space first");
+        const newName = prompt("New space name:");
         if (!newName) return;
-
-        const { error } = await sb.from('user_workspaces')
-            .update({ workspace_name: newName })
-            .eq('workspace_id', this.currentWorkspace)
-            .eq('user_id', this.user.id);
-
-        if (error) alert(error.message);
-        else this.fetchWorkspaces(); // Refresh the list
+        await sb.from('user_workspaces').update({ workspace_name: newName }).eq('workspace_id', this.currentWorkspace);
+        this.fetchWorkspaces();
     },
 
     deleteWorkspace: async function() {
-        if (!this.currentWorkspace) return;
-        if (!confirm("Are you sure? This will remove this space from your list (trackers will remain in the database).")) return;
-
-        const { error } = await sb.from('user_workspaces')
-            .delete()
-            .eq('workspace_id', this.currentWorkspace)
-            .eq('user_id', this.user.id);
-
-        if (error) alert(error.message);
-        else {
-            // Drop back to Private Space after deletion
-            this.switchWorkspace(null);
-        }
+        if (!this.currentWorkspace || !confirm("Delete this entire space?")) return;
+        await sb.from('user_workspaces').delete().eq('workspace_id', this.currentWorkspace);
+        this.switchWorkspace(null);
     },
 
     switchWorkspace: function(id) {
@@ -93,6 +64,10 @@ const app = {
             if (this.currentWorkspace === ws.workspace_id) opt.selected = true;
             dropdown.appendChild(opt);
         });
+
+        // Show/Hide management buttons if in a workspace
+        const controls = document.getElementById('ws-manage-controls');
+        if (controls) controls.style.display = this.currentWorkspace ? 'flex' : 'none';
     },
 
     // --- TRACKER LOGIC ---
@@ -101,9 +76,7 @@ const app = {
         let query = sb.from('trackers').select('*');
         if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
         else query = query.eq('user_id', this.user.id).is('workspace_id', null);
-        
         const { data } = await query;
-        // Sort by custom order saved in history_data
         this.trackers = (data || []).sort((a, b) => (a.history_data.order || 0) - (b.history_data.order || 0));
         this.render();
     },
@@ -112,21 +85,14 @@ const app = {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
         if(!name) return alert("Enter a name");
-
-        let initialData = { order: this.trackers.length };
+        let initialData = { order: this.trackers.length, colSpan: 1, rowSpan: 1 };
         if (type === 'code') initialData.code = "<h1>New Code Card</h1>";
-        
-        await sb.from('trackers').insert([{ 
-            name, type, user_id: this.user.id, 
-            workspace_id: this.currentWorkspace, 
-            history_data: initialData 
-        }]);
-
+        await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: initialData }]);
         this.closeModal();
         this.fetchTrackers(); 
     },
 
-// --- RENDERING & INTERACTION ---
+    // --- RENDERING & RESIZING ---
     render: function() {
         const container = document.getElementById('module-container');
         container.innerHTML = '';
@@ -137,24 +103,20 @@ const app = {
             card.id = `card-${t.id}`;
             card.draggable = true;
 
-            // Apply spans (The "Source of Truth")
+            // Apply Spans
             card.style.gridColumn = `span ${h.colSpan || 1}`;
             card.style.gridRow = `span ${h.rowSpan || 1}`;
+            if(h.w) card.style.width = h.w + 'px';
+            if(h.h) card.style.height = h.h + 'px';
 
             card.innerHTML = `
-                <div class="card-header">
-                    <div style="display:flex; gap:5px;">
-                        <button onclick="app.toggleWidth(${t.id})" class="neal-btn" style="padding:2px 5px; font-size:10px;">↔</button>
-                        <button onclick="app.toggleHeight(${t.id})" class="neal-btn" style="padding:2px 5px; font-size:10px;">↕</button>
-                        <span>${t.name}</span>
-                    </div>
+                <div class="card-header" style="cursor: grab;">
+                    <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
-                <div class="card-body">
-                    ${this.getTypeHTML(t)}
-                </div>`;
+                <div class="card-body">${this.getTypeHTML(t)}</div>`;
 
-            // Keep your working drag/drop logic here
+            // Drag to Reorder
             card.ondragstart = (e) => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', t.id); };
             card.ondragend = () => card.classList.remove('dragging');
             card.ondragover = (e) => {
@@ -163,15 +125,49 @@ const app = {
                 const siblings = [...container.querySelectorAll('.module:not(.dragging)')];
                 const nextSibling = siblings.find(s => {
                     const r = s.getBoundingClientRect();
-                    return e.clientY <= r.top + r.height / 2;
+                    return e.clientY <= r.top + r.height / 2 && e.clientX <= r.left + r.width / 2;
                 });
                 container.insertBefore(draggingCard, nextSibling);
             };
             card.ondrop = () => this.saveNewOrder();
 
+            // Resizing Logic (Grid Snapping)
+            card.onmouseup = () => this.handleResize(t.id);
+
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
         });
+    },
+
+    handleResize: async function(id) {
+        const el = document.getElementById(`card-${id}`);
+        const t = this.trackers.find(x => x.id === id);
+        if (!el || !t) return;
+
+        // Calculate spans based on current pixel size (320px col, 220px row base)
+        const newColSpan = Math.max(1, Math.ceil(el.offsetWidth / 320));
+        const newRowSpan = Math.max(1, Math.ceil(el.offsetHeight / 220));
+
+        // If the spans changed, update DB and re-render to snap
+        if (newColSpan !== t.history_data.colSpan || newRowSpan !== t.history_data.rowSpan) {
+            t.history_data.colSpan = newColSpan;
+            t.history_data.rowSpan = newRowSpan;
+            t.history_data.w = el.offsetWidth;
+            t.history_data.h = el.offsetHeight;
+            await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
+            this.render(); // Snaps the grid
+        }
+    },
+
+    saveNewOrder: async function() {
+        const cardElements = [...document.querySelectorAll('.module')];
+        const updates = cardElements.map((el, index) => {
+            const id = el.id.replace('card-', '');
+            const tracker = this.trackers.find(t => t.id == id);
+            tracker.history_data.order = index;
+            return sb.from('trackers').update({ history_data: tracker.history_data }).eq('id', id);
+        });
+        await Promise.all(updates);
     },
 
     getTypeHTML: function(t) {
@@ -195,46 +191,12 @@ const app = {
         return '';
     },
 
-    // --- UPDATES & SAVING ---
     logValue: async function(id, key, val) {
         const t = this.trackers.find(x => x.id === id);
         let history = { ...t.history_data };
         t.type === 'bool' ? (history[key] = !history[key]) : (history[key] = val);
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
         this.fetchTrackers();
-    },
-
-    // Replace saveSize with this
-    toggleWidth: async function(id) {
-        const t = this.trackers.find(x => x.id === id);
-        let h = t.history_data;
-        // Cycle through 1, 2, or 3 columns
-        let newSpan = (h.colSpan || 1) >= 3 ? 1 : (h.colSpan || 1) + 1;
-        
-        t.history_data.colSpan = newSpan;
-        await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
-        this.render();
-    },
-
-    toggleHeight: async function(id) {
-        const t = this.trackers.find(x => x.id === id);
-        let h = t.history_data;
-        // Cycle through 1 or 2 rows
-        let newSpan = (h.rowSpan || 1) >= 2 ? 1 : (h.rowSpan || 1) + 1;
-        
-        t.history_data.rowSpan = newSpan;
-        await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
-        this.render();
-    },
-
-    saveNewOrder: async function() {
-        const cardElements = [...document.querySelectorAll('.module')];
-        const updates = cardElements.map((el, index) => {
-            const id = el.id.replace('card-', '');
-            const tracker = this.trackers.find(t => t.id == id);
-            return sb.from('trackers').update({ history_data: { ...tracker.history_data, order: index } }).eq('id', id);
-        });
-        await Promise.all(updates);
     },
 
     editCode: function(id) {
@@ -252,7 +214,6 @@ const app = {
         document.getElementById('close-editor').onclick = () => document.body.removeChild(editorDiv);
     },
 
-    // --- CANVAS, AUTH & UI HELPERS ---
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
         if(!canvas) return;

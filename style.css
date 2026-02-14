@@ -56,15 +56,18 @@ body {
 }
 
 .module {
-    background: var(--sticky-color);
-    border: var(--border-width) solid var(--accent);
-    box-shadow: var(--shadow);
+    resize: both;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    /* We handle size via grid spans, not pixels */
-    width: 100%;
-    height: 100%;
+    min-width: 300px;
+    min-height: 200px;
+}
+
+#ws-manage-controls {
+    display: none; /* Controlled by fetchWorkspaces JS */
+    gap: 10px;
+    margin-left: 10px;
 }
 
 .module:hover {

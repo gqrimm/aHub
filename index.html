@@ -42,9 +42,10 @@
                 </select>
                 <button onclick="app.createNewWorkspace()" class="neal-btn primary">+ New Space</button>
                 
-                <div id="ws-manage-controls" class="hidden">
-                    <span class="edit-text" onclick="app.renameWorkspace()">Rename</span>
-                    <span class="danger-text" onclick="app.deleteWorkspace()">Delete Space</span>
+                <select id="workspace-dropdown" onchange="app.switchWorkspace(this.value)"></select>
+                <div id="ws-manage-controls">
+                    <button class="neal-btn" onclick="app.renameWorkspace()">Rename</button>
+                    <button class="neal-btn" onclick="app.deleteWorkspace()">Delete</button>
                 </div>
             </div>
 
