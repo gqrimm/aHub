@@ -13,65 +13,50 @@
     <div id="auth-overlay" class="overlay">
         <div class="auth-card">
             <h1>Welcome.</h1>
-            <p style="margin-bottom: 20px; font-size: 0.9rem; color: #666;">Sign in to access your workspaces</p>
-            
+            <p style="margin-bottom: 20px; font-size: 0.9rem; color: #666;">Sign in to your workspace</p>
             <input type="email" id="user" placeholder="Email" class="neal-input">
             <input type="password" id="pass" placeholder="Password" class="neal-input">
-            
             <div class="auth-buttons">
                 <button onclick="app.login()" class="neal-btn primary">Login</button>
                 <button onclick="app.register()" class="neal-btn">Sign Up</button>
             </div>
-            
-            <div style="margin-top: 15px;">
-                <button onclick="app.forgotPassword()" class="neal-btn" style="border: none; background: transparent; text-decoration: underline; font-size: 0.8rem; box-shadow: none;">
-                    Forgot Password?
-                </button>
-            </div>
+            <button onclick="app.forgotPassword()" style="margin-top:15px; background:none; border:none; text-decoration:underline; cursor:pointer; font-size:0.8rem;">Forgot Password?</button>
         </div>
     </div>
 
     <div id="main-content" class="hidden">
         <header class="main-header">
             <div class="logo">aHub</div>
-            <div class="header-actions">
-                <button onclick="app.logout()" class="neal-btn danger">Logout</button>
-            </div>
+            <button onclick="app.logout()" class="neal-btn danger">Logout</button>
         </header>
 
         <section class="workspace-bar">
             <div class="workspace-group">
-                <input type="text" id="join-work-id" placeholder="Enter ID to Join" class="neal-input small">
-                <button onclick="app.joinWorkspace()" class="neal-btn">Join</button>
+                <input type="text" id="join-work-id" placeholder="Space ID" class="neal-input small">
+                <button onclick="app.saveWorkspaceToBookmarks(document.getElementById('join-work-id').value)" class="neal-btn">Join</button>
             </div>
-
-            <select id="workspace-dropdown" class="neal-input" style="width: auto;" onchange="app.switchWorkspace(this.value)">
+            <select id="workspace-dropdown" class="neal-input" onchange="app.switchWorkspace(this.value)">
                 <option value="">🏠 Private Space</option>
             </select>
-
             <div class="workspace-group">
-                <button onclick="app.createNewWorkspace()" class="neal-btn primary">✨ New Space</button>
                 <button onclick="app.copyInviteLink()" class="neal-btn">🔗 Invite</button>
             </div>
         </section>
 
-        <main id="module-container" class="grid-container">
-            <div class="module portal-card">
-                <h3>Trade Checker</h3>
-                <a href="https://amvgg.com/calculator" target="_blank" class="neal-btn">Open AMVGG ↗</a>
-            </div>
-        </main>
+        <main id="module-container" class="grid-container"></main>
 
         <button class="fab" onclick="app.openModal()">+</button>
     </div>
 
     <div id="modal-overlay" class="overlay hidden">
         <div class="auth-card">
-            <h2>New Tracker</h2>
-            <input type="text" id="track-name" placeholder="Name (Required)" class="neal-input">
+            <h2>New Module</h2>
+            <input type="text" id="track-name" placeholder="Name" class="neal-input">
             <select id="track-type" class="neal-input">
-                <option value="bool">Checkmark (Done/Not Done)</option>
-                <option value="text">Value Entry (Grams, Laps, etc.)</option>
+                <option value="bool">📅 Calendar: Checkmark</option>
+                <option value="text">📅 Calendar: Text Value</option>
+                <option value="pure-text">📝 Sticky Note</option>
+                <option value="drawing">🎨 Drawing Board</option>
             </select>
             <div class="auth-buttons">
                 <button onclick="app.createTracker()" class="neal-btn primary">Create</button>
