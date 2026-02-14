@@ -10,46 +10,70 @@ const app = {
     selectedDate: new Date().toISOString().split('T')[0],
 
     init: async function() {
+        // 1. Check current session
         const { data: { session } } = await sb.auth.getSession();
         if (session) {
             this.user = session.user;
             this.showDashboard();
         }
 
+        // 2. Single Auth Listener for EVERYTHING
         sb.auth.onAuthStateChange(async (event, session) => {
             if (event === "PASSWORD_RECOVERY") {
                 const newPassword = prompt("Enter your new password:");
                 if (newPassword) {
                     const { error } = await sb.auth.updateUser({ password: newPassword });
-                    if (error) alert("Error updating password: " + error.message);
-                    else alert("Password updated successfully! You can now log in.");
+                    if (error) alert("Error: " + error.message);
+                    else alert("Password updated! Logging you in...");
                 }
             }
 
-        sb.auth.onAuthStateChange((event, session) => {
             if (session) {
                 this.user = session.user;
                 this.showDashboard();
             } else {
+                this.user = null;
                 this.showLogin();
             }
-            
         });
 
+        // 3. Realtime updates
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
     login: async () => {
-        const { error } = await sb.auth.signInWithPassword({ email: document.getElementById('user').value, password: document.getElementById('pass').value });
+        const { error } = await sb.auth.signInWithPassword({ 
+            email: document.getElementById('user').value, 
+            password: document.getElementById('pass').value 
+        });
         if (error) alert(error.message);
     },
 
     register: async () => {
-        const { error } = await sb.auth.signUp({ email: document.getElementById('user').value, password: document.getElementById('pass').value });
-        if (error) alert(error.message); else alert("Check email for verification!");
+        const { error } = await sb.auth.signUp({ 
+            email: document.getElementById('user').value, 
+            password: document.getElementById('pass').value 
+        });
+        if (error) alert(error.message); 
+        else alert("Check email for verification!");
     },
 
-    logout: async () => { await sb.auth.signOut(); localStorage.clear(); location.reload(); },
+    // --- ADDED THIS BACK IN ---
+    forgotPassword: async function() {
+        const email = document.getElementById('user').value;
+        if (!email) return alert("Please enter your email address first.");
+        const { error } = await sb.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.href, // Brings them back to this exact page
+        });
+        if (error) alert(error.message);
+        else alert("Password reset link sent to your email!");
+    },
+
+    logout: async () => { 
+        await sb.auth.signOut(); 
+        localStorage.clear(); 
+        location.reload(); 
+    },
 
     fetchTrackers: async function() {
         if (!this.user) return;
@@ -64,7 +88,11 @@ const app = {
     createTracker: async function() {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
-        await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: {} }]);
+        await sb.from('trackers').insert([{ 
+            name, type, user_id: this.user.id, 
+            workspace_id: this.currentWorkspace, 
+            history_data: {} 
+        }]);
         this.closeModal();
     },
 
@@ -77,6 +105,7 @@ const app = {
 
     render: function() {
         const container = document.getElementById('module-container');
+        if (!container) return;
         container.innerHTML = '';
         this.trackers.forEach(t => {
             const card = document.createElement('div');
@@ -112,6 +141,7 @@ const app = {
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img, 0, 0); img.src = t.history_data.img; }
         let drawing = false;
@@ -121,8 +151,15 @@ const app = {
     },
 
     deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },
-    showDashboard: function() { document.getElementById('auth-overlay').classList.add('hidden'); document.getElementById('main-content').classList.remove('hidden'); this.fetchTrackers(); },
-    showLogin: function() { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
+    showDashboard: function() { 
+        document.getElementById('auth-overlay').classList.add('hidden'); 
+        document.getElementById('main-content').classList.remove('hidden'); 
+        this.fetchTrackers(); 
+    },
+    showLogin: function() { 
+        document.getElementById('auth-overlay').classList.remove('hidden'); 
+        document.getElementById('main-content').classList.add('hidden'); 
+    },
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden'),
     copyInviteLink: function() { navigator.clipboard.writeText(location.origin + location.pathname + '?space=' + this.currentWorkspace); alert("Copied!"); }
