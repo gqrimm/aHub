@@ -12,10 +12,12 @@ const app = {
     init: async function() {
         const { data: { session } } = await sb.auth.getSession();
         if (session) { this.user = session.user; this.showDashboard(); }
+
         sb.auth.onAuthStateChange(async (event, session) => {
             if (session) { this.user = session.user; this.showDashboard(); }
             else { this.user = null; this.showLogin(); }
         });
+
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
     },
 
@@ -56,6 +58,7 @@ const app = {
         const { data } = await sb.from('user_workspaces').select('*').eq('user_id', this.user.id);
         this.workspaces = data || [];
         const dropdown = document.getElementById('workspace-dropdown');
+        if (!dropdown) return;
         dropdown.innerHTML = '<option value="">🏠 Private Space</option>';
         this.workspaces.forEach(ws => {
             const opt = document.createElement('option');
@@ -65,7 +68,6 @@ const app = {
             dropdown.appendChild(opt);
         });
 
-        // Show/Hide management buttons if in a workspace
         const controls = document.getElementById('ws-manage-controls');
         if (controls) controls.style.display = this.currentWorkspace ? 'flex' : 'none';
     },
@@ -76,6 +78,7 @@ const app = {
         let query = sb.from('trackers').select('*');
         if (this.currentWorkspace) query = query.eq('workspace_id', this.currentWorkspace);
         else query = query.eq('user_id', this.user.id).is('workspace_id', null);
+        
         const { data } = await query;
         this.trackers = (data || []).sort((a, b) => (a.history_data.order || 0) - (b.history_data.order || 0));
         this.render();
@@ -85,14 +88,21 @@ const app = {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
         if(!name) return alert("Enter a name");
+
         let initialData = { order: this.trackers.length, colSpan: 1, rowSpan: 1 };
         if (type === 'code') initialData.code = "<h1>New Code Card</h1>";
-        await sb.from('trackers').insert([{ name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: initialData }]);
+        
+        await sb.from('trackers').insert([{ 
+            name, type, user_id: this.user.id, 
+            workspace_id: this.currentWorkspace, 
+            history_data: initialData 
+        }]);
+
         this.closeModal();
         this.fetchTrackers(); 
     },
 
-    // --- RENDERING & RESIZING ---
+    // --- RENDERING & INTERACTION ---
     render: function() {
         const container = document.getElementById('module-container');
         container.innerHTML = '';
@@ -101,8 +111,8 @@ const app = {
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
             card.id = `card-${t.id}`;
-            
-            // Apply Saved Spans and Sizes
+
+            // Apply Spans (for Grid Layout) and Pixels (for fine-tuning)
             card.style.gridColumn = `span ${h.colSpan || 1}`;
             card.style.gridRow = `span ${h.rowSpan || 1}`;
             if(h.w) card.style.width = h.w + 'px';
@@ -113,23 +123,22 @@ const app = {
                     <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
-                <div class="card-body">${this.getTypeHTML(t)}</div>`;
+                <div class="card-body">
+                    ${this.getTypeHTML(t)}
+                </div>`;
 
-            // --- DRAG TO MOVE LOGIC (Header Only) ---
+            // --- DRAG TO MOVE (Header Only) ---
             const header = card.querySelector('.card-header');
-            
             header.ondragstart = (e) => { 
                 card.classList.add('dragging'); 
                 e.dataTransfer.setData('text/plain', t.id); 
             };
-            
             header.ondragend = () => card.classList.remove('dragging');
 
             card.ondragover = (e) => {
                 e.preventDefault();
                 const draggingCard = document.querySelector('.dragging');
                 if (!draggingCard || draggingCard === card) return;
-
                 const siblings = [...container.querySelectorAll('.module:not(.dragging)')];
                 const nextSibling = siblings.find(s => {
                     const r = s.getBoundingClientRect();
@@ -137,10 +146,9 @@ const app = {
                 });
                 container.insertBefore(draggingCard, nextSibling);
             };
-
             card.ondrop = () => this.saveNewOrder();
 
-            // --- RESIZE SNAP LOGIC ---
+            // --- RESIZE TO SNAP ---
             card.onmouseup = () => this.handleResize(t.id);
 
             container.appendChild(card);
@@ -153,18 +161,21 @@ const app = {
         const t = this.trackers.find(x => x.id === id);
         if (!el || !t) return;
 
-        // Calculate spans based on current pixel size (320px col, 220px row base)
+        // Convert pixel width/height to Grid Spans
+        // Base Unit: 320px width, 220px height
         const newColSpan = Math.max(1, Math.ceil(el.offsetWidth / 320));
         const newRowSpan = Math.max(1, Math.ceil(el.offsetHeight / 220));
 
-        // If the spans changed, update DB and re-render to snap
-        if (newColSpan !== t.history_data.colSpan || newRowSpan !== t.history_data.rowSpan) {
+        if (newColSpan !== t.history_data.colSpan || newRowSpan !== t.history_data.rowSpan || 
+            el.offsetWidth !== t.history_data.w) {
+            
             t.history_data.colSpan = newColSpan;
             t.history_data.rowSpan = newRowSpan;
             t.history_data.w = el.offsetWidth;
             t.history_data.h = el.offsetHeight;
+
             await sb.from('trackers').update({ history_data: t.history_data }).eq('id', id);
-            this.render(); // Snaps the grid
+            this.render(); // Force grid to snap and push other cards
         }
     },
 
@@ -233,6 +244,14 @@ const app = {
         canvas.onmousedown = (e) => { draw = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if(draw) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
         canvas.onmouseup = async () => { draw = false; await sb.from('trackers').update({ history_data: { ...t.history_data, img: canvas.toDataURL() } }).eq('id', t.id); };
+    },
+
+    clearCanvas: async function(id) {
+        const canvas = document.getElementById(`canvas-${id}`);
+        if (!canvas) return;
+        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+        const t = this.trackers.find(x => x.id === id);
+        await sb.from('trackers').update({ history_data: { ...t.history_data, img: null } }).eq('id', id);
     },
 
     deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },

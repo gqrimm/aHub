@@ -20,6 +20,7 @@ body {
     background-size: 25px 25px;
     margin: 0; 
     color: #1a1a1a;
+    min-height: 100vh;
 }
 
 .hidden { display: none !important; }
@@ -46,28 +47,27 @@ body {
 
 .grid-container {
     display: grid;
-    /* Strict columns: 300px each */
+    /* Grid columns snap to 300px chunks */
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    /* Strict rows: 200px each */
     grid-auto-rows: 200px; 
     grid-auto-flow: row dense; 
     gap: 20px;
     padding: 20px;
 }
 
+/* --- THE MODULE (CARD) --- */
 .module {
-    resize: both;
-    overflow: hidden;
+    background: var(--sticky-color);
+    border: var(--border-width) solid var(--accent);
+    box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+    /* RESIZE ENABLED: Native corner dragging */
+    resize: both; 
     min-width: 300px;
     min-height: 200px;
-}
-
-#ws-manage-controls {
-    display: none; /* Controlled by fetchWorkspaces JS */
-    gap: 10px;
-    margin-left: 10px;
+    position: relative;
 }
 
 .module:hover {
@@ -75,14 +75,29 @@ body {
     box-shadow: 8px 8px 0px rgba(0,0,0,1);
 }
 
+.module.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+    border: 2px dashed var(--accent);
+    box-shadow: none;
+}
+
 .card-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     padding: 15px;
     border-bottom: var(--border-width) solid var(--accent);
+    background: rgba(0,0,0,0.03);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
+    /* DRAG ENABLED: Grabbing the header moves the card */
+    cursor: grab;
+}
+
+.card-header:active {
+    cursor: grabbing;
 }
 
 .card-body {
@@ -93,6 +108,15 @@ body {
     overflow: hidden;
 }
 
+/* --- WORKSPACE MANAGEMENT --- */
+#ws-manage-controls {
+    display: none; /* Toggled by JS (flex) when currentWorkspace exists */
+    align-items: center;
+    gap: 15px;
+    padding-left: 15px;
+    border-left: 2px solid #ddd;
+}
+
 /* --- INPUTS & BUTTONS --- */
 .neal-input {
     border: var(--border-width) solid var(--accent);
@@ -101,6 +125,7 @@ body {
     background: white;
     font-weight: 600;
     outline: none;
+    width: 100%;
 }
 
 .neal-btn {
@@ -112,7 +137,7 @@ body {
     cursor: pointer;
     box-shadow: 4px 4px 0px var(--accent);
     text-transform: uppercase;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
 }
 
 .neal-btn:active {
@@ -140,7 +165,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     cursor: pointer;
 }
@@ -159,7 +184,7 @@ body {
     font-size: 1.1rem;
     font-family: inherit;
     outline: none;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 .draw-canvas {
@@ -171,26 +196,19 @@ body {
 }
 
 /* --- UI HELPERS --- */
-#ws-manage-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding-left: 10px;
-    border-left: 1px solid #ccc;
-}
-
 .danger-text { 
     color: var(--danger); 
     font-weight: 800; 
     cursor: pointer; 
-    font-size: 0.75rem; 
+    font-size: 0.7rem; 
     text-transform: uppercase;
+    text-decoration: underline;
 }
 
 .edit-text { 
     color: #666; 
     cursor: pointer; 
-    font-size: 0.75rem; 
+    font-size: 0.7rem; 
     text-decoration: underline;
     text-transform: uppercase;
 }
@@ -199,15 +217,15 @@ body {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 65px;
-    height: 65px;
+    width: 60px;
+    height: 60px;
     background: var(--accent);
     color: #fff;
     border: var(--border-width) solid var(--accent);
     border-radius: 50%;
-    font-size: 35px;
+    font-size: 30px;
     cursor: pointer;
-    box-shadow: 6px 6px 0px rgba(0,0,0,0.2);
+    box-shadow: 4px 4px 0px rgba(0,0,0,0.3);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -236,17 +254,14 @@ body {
     text-align: center;
 }
 
-/* Add to your CSS */
-.module.dragging {
-    opacity: 0.5;
-    transform: scale(0.95);
-    border: 2px dashed var(--accent);
+/* Scrollbar Styling for Neubrutalist look */
+::-webkit-scrollbar {
+    width: 10px;
 }
-
-.card-header {
-    cursor: grab; /* Shows the user they can move the card */
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
 }
-
-.card-header:active {
-    cursor: grabbing;
+::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border: 2px solid #f1f1f1;
 }
