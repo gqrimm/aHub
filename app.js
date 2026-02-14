@@ -138,11 +138,24 @@ const app = {
         const name = document.getElementById('track-name').value;
         const type = document.getElementById('track-type').value;
         if(!name) return alert("Enter a name");
+
+        let initialData = {};
+        if (type === 'code') {
+            initialData = { code: "<h1>New Code Card</h1><p>Click Edit Source to change this!</p>" };
+        } else if (type === 'drawing') {
+            initialData = { img: null };
+        }
+
         await sb.from('trackers').insert([{ 
-            name, type, user_id: this.user.id, workspace_id: this.currentWorkspace, history_data: {} 
+            name, 
+            type, 
+            user_id: this.user.id, 
+            workspace_id: this.currentWorkspace, 
+            history_data: initialData 
         }]);
+
         this.closeModal();
-        this.fetchTrackers(); // Refresh immediately
+        this.fetchTrackers(); 
     },
 
     login: async function() {
@@ -172,7 +185,7 @@ const app = {
                     <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="height: 100%; display: flex; flex-direction: column;">
                     ${this.getTypeHTML(t)}
                 </div>`;
             container.appendChild(card);
@@ -181,83 +194,110 @@ const app = {
     },
 
     getTypeHTML: function(t) {
+        const history = t.history_data || {};
+
         if (t.type === 'bool' || t.type === 'text') {
             let cal = '<div class="calendar-grid">';
             for (let i = 13; i >= 0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
                 const k = d.toISOString().split('T')[0];
-                cal += `<div class="day-box ${t.history_data[k] ? 'day-active' : ''}" onclick="app.selectedDate='${k}'; app.render()">${d.getDate()}</div>`;
+                cal += `<div class="day-box ${history[k] ? 'day-active' : ''}" onclick="app.selectedDate='${k}'; app.render()">${d.getDate()}</div>`;
             }
             cal += '</div>';
-            const val = t.history_data[this.selectedDate] || "";
+            const val = history[this.selectedDate] || "";
             const input = t.type === 'bool' ? 
                 `<button class="neal-btn ${val ? 'primary' : ''}" style="width:100%; margin-top:10px;" onclick="app.logValue(${t.id},'${this.selectedDate}',true)">${val ? '✓' : 'DONE'}</button>` :
                 `<input type="text" class="neal-input" style="width:100%; margin-top:10px;" value="${val}" onchange="app.logValue(${t.id},'${this.selectedDate}',this.value)">`;
             return `<small>${this.selectedDate}</small>${cal}${input}`;
         }
-        if (t.type === 'pure-text') return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${t.history_data.note || ''}</textarea>`;
-        if (t.type === 'drawing') return `<canvas id="canvas-${t.id}" class="draw-canvas"></canvas><button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
+
+        if (t.type === 'pure-text') {
+            return `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)">${history.note || ''}</textarea>`;
+        }
+
+        if (t.type === 'drawing') {
+            return `<canvas id="canvas-${t.id}" class="draw-canvas" style="flex-grow:1; min-height:150px; border:1px solid #000;"></canvas>
+                    <button class="neal-btn" style="margin-top:5px; font-size:10px;" onclick="app.clearCanvas(${t.id})">Clear</button>`;
+        }
+
         if (t.type === 'code') {
-    const code = t.history_data.code || "<h1>Hello!</h1><p>Edit me...</p>";
-    return `
-        <div style="flex-grow:1; display:flex; flex-direction:column; gap:10px;">
-            <iframe id="preview-${t.id}" srcdoc="${code.replace(/"/g, '&quot;')}" style="border:2px solid #000; background:#fff; flex-grow:1; width:100%;"></iframe>
-            <button class="neal-btn" onclick="app.editCode(${t.id})" style="font-size:10px;">Edit Source</button>
-        </div>
-    `;
-}
+            const codeFallback = history.code || "<h1>Empty Card</h1>";
+            return `
+                <div style="flex-grow:1; display:flex; flex-direction:column; gap:10px; height:100%;">
+                    <iframe id="preview-${t.id}" srcdoc="${codeFallback.replace(/"/g, '&quot;')}" style="border:1px solid #000; background:#fff; flex-grow:1; width:100%; min-height:200px;"></iframe>
+                    <button class="neal-btn" onclick="app.editCode(${t.id})" style="font-size:10px;">Edit Source</button>
+                </div>
+            `;
+        }
+        return '';
     },
 
     logValue: async function(id, key, val) {
         const t = this.trackers.find(x => x.id === id);
-        let history = { ...t.history_data };
+        let history = { ...(t.history_data || {}) };
         t.type === 'bool' ? (history[key] = !history[key]) : (history[key] = val);
         await sb.from('trackers').update({ history_data: history }).eq('id', id);
         this.fetchTrackers();
     },
 
     editCode: async function(id) {
-    const t = this.trackers.find(x => x.id === id);
-    const currentCode = t.history_data.code || "";
-    const newCode = prompt("Paste your HTML/CSS code here:", currentCode);
-    
-    if (newCode !== null) {
-        let history = { ...t.history_data, code: newCode };
-        await sb.from('trackers').update({ history_data: history }).eq('id', id);
-        this.fetchTrackers();
-    }
-},
+        const t = this.trackers.find(x => x.id === id);
+        const currentCode = (t.history_data && t.history_data.code) ? t.history_data.code : "";
+        const newCode = prompt("Paste your HTML/CSS code here:", currentCode);
+        
+        if (newCode !== null) {
+            let history = { ...t.history_data, code: newCode };
+            await sb.from('trackers').update({ history_data: history }).eq('id', id);
+            this.fetchTrackers();
+        }
+    },
 
     initCanvas: function(t) {
         const canvas = document.getElementById(`canvas-${t.id}`);
         if(!canvas) return;
         const ctx = canvas.getContext('2d');
-        // Set internal resolution to match display size
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
 
-        if (t.history_data.img) { const img = new Image(); img.onload = () => ctx.drawImage(img,0,0, canvas.width, canvas.height); img.src = t.history_data.img; }
+        if (t.history_data && t.history_data.img) { 
+            const img = new Image(); 
+            img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height); 
+            img.src = t.history_data.img; 
+        }
+        
         let draw = false;
         canvas.onmousedown = (e) => { draw = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); };
         canvas.onmousemove = (e) => { if(draw) { ctx.lineTo(e.offsetX, e.offsetY); ctx.stroke(); } };
-        canvas.onmouseup = async () => { draw = false; await sb.from('trackers').update({ history_data: { ...t.history_data, img: canvas.toDataURL() } }).eq('id', t.id); };
+        canvas.onmouseup = async () => { 
+            draw = false; 
+            await sb.from('trackers').update({ 
+                history_data: { ...t.history_data, img: canvas.toDataURL() } 
+            }).eq('id', t.id); 
+        };
     },
 
     clearCanvas: async function(id) {
         const canvas = document.getElementById(`canvas-${id}`);
+        if (!canvas) return;
         canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
         const t = this.trackers.find(x => x.id === id);
         await sb.from('trackers').update({ history_data: { ...t.history_data, img: null } }).eq('id', id);
     },
 
     deleteTracker: async (id) => { if (confirm("Delete?")) await sb.from('trackers').delete().eq('id', id); },
+    
     showDashboard: function() { 
         document.getElementById('auth-overlay').classList.add('hidden'); 
         document.getElementById('main-content').classList.remove('hidden'); 
         this.fetchWorkspaces();
         this.fetchTrackers(); 
     },
-    showLogin: function() { document.getElementById('auth-overlay').classList.remove('hidden'); document.getElementById('main-content').classList.add('hidden'); },
+    
+    showLogin: function() { 
+        document.getElementById('auth-overlay').classList.remove('hidden'); 
+        document.getElementById('main-content').classList.add('hidden'); 
+    },
+    
     openModal: () => document.getElementById('modal-overlay').classList.remove('hidden'),
     closeModal: () => document.getElementById('modal-overlay').classList.add('hidden')
 };
