@@ -16,6 +16,16 @@ const app = {
             this.showDashboard();
         }
 
+        sb.auth.onAuthStateChange(async (event, session) => {
+            if (event === "PASSWORD_RECOVERY") {
+                const newPassword = prompt("Enter your new password:");
+                if (newPassword) {
+                    const { error } = await sb.auth.updateUser({ password: newPassword });
+                    if (error) alert("Error updating password: " + error.message);
+                    else alert("Password updated successfully! You can now log in.");
+                }
+            }
+
         sb.auth.onAuthStateChange((event, session) => {
             if (session) {
                 this.user = session.user;
@@ -23,6 +33,7 @@ const app = {
             } else {
                 this.showLogin();
             }
+            
         });
 
         sb.channel('db-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'trackers' }, () => this.fetchTrackers()).subscribe();
