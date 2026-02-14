@@ -95,29 +95,49 @@ const app = {
         container.innerHTML = '';
         this.trackers.forEach(t => {
             const card = document.createElement('div');
-            card.className = `module sticky-note type-${t.type}`;
+            card.className = `module type-${t.type}`;
             
-            // Shared Header with Pin and Close
-            let content = `
-                <div class="pin"></div>
+            // Shared Sticky Header
+            let html = `
                 <div class="card-header">
                     <strong>${t.name}</strong>
-                    <button class="close-btn" onclick="app.deleteTracker(${t.id})">×</button>
+                    <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer; font-weight:bold;">×</button>
                 </div>
                 <div class="card-body">
             `;
 
-            if (t.type === 'bool' || t.type === 'text') content += this.getCalendarHTML(t);
-            else if (t.type === 'pure-text') content += this.getNoteHTML(t);
-            else if (t.type === 'drawing') content += this.getDrawingHTML(t);
+            if (t.type === 'bool' || t.type === 'text') {
+                html += this.getCalendarHTML(t);
+            } else if (t.type === 'pure-text') {
+                html += `<textarea class="note-area" onchange="app.logValue(${t.id},'note',this.value)" placeholder="Write something...">${t.history_data.note || ''}</textarea>`;
+            } else if (t.type === 'drawing') {
+                html += `
+                    <canvas id="canvas-${t.id}" class="draw-canvas" width="380" height="200"></canvas>
+                    <button class="neal-btn" style="margin-top:10px; font-size: 10px;" onclick="app.clearCanvas(${t.id})">CLEAR BOARD</button>
+                `;
+            }
 
-            content += `</div>`; // Close card-body
-            card.innerHTML = content;
+            html += `</div>`;
+            card.innerHTML = html;
             container.appendChild(card);
             if (t.type === 'drawing') this.initCanvas(t);
         });
     },
 
+    // NEW: Clear Canvas Function
+    clearCanvas: async function(id) {
+        const canvas = document.getElementById(`canvas-${id}`);
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Update Database to remove the image string
+        const t = this.trackers.find(x => x.id === id);
+        let history = { ...t.history_data };
+        delete history.img;
+        await sb.from('trackers').update({ history_data: history }).eq('id', id);
+    },
+    
     getCalendarHTML: function(t) {
         let cal = '<div class="calendar-grid">';
         for (let i = 13; i >= 0; i--) {
