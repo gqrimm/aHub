@@ -46,33 +46,28 @@ body {
 
 .grid-container {
     display: grid;
-    /* This allows cards to span as much space as they need */
+    /* This creates 300px columns that expand to fill space */
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    grid-auto-rows: min-content; 
-    grid-auto-flow: row dense; /* Fills in gaps automatically */
+    grid-auto-rows: minmax(200px, auto); 
     gap: 25px;
     padding: 30px;
-    align-items: start;
 }
 
-/* --- THE MODULE (THE STICKY NOTE) --- */
-/* Update your .module class in your CSS file */
 .module {
     background: var(--sticky-color);
     border: var(--border-width) solid var(--accent);
-    border-radius: 4px;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
-    resize: both; 
-    overflow: hidden; /* Changed from auto to hidden to prevent scrollbar flicker */
-    min-height: 200px;
-    min-width: 250px;
     position: relative;
     
-    /* This ensures that as you resize, the grid container grows with it */
-    grid-column: span auto;
-    grid-row: span auto;
+    /* RESIZE LOGIC */
+    resize: both;
+    overflow: hidden;
+    
+    /* These ensure the card pushes others away */
+    grid-column: span 1;
+    grid-row: span 1;
 }
 
 .module:hover {

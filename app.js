@@ -95,7 +95,7 @@ const app = {
         this.fetchTrackers(); 
     },
 
-    // --- RENDERING & INTERACTION ---
+// --- RENDERING & INTERACTION ---
     render: function() {
         const container = document.getElementById('module-container');
         container.innerHTML = '';
@@ -105,11 +105,24 @@ const app = {
             card.id = `card-${t.id}`;
             card.draggable = true;
             
-            // Inside app.render() trackers loop:
-            if (t.history_data.w) card.style.width = t.history_data.w + 'px';
-            if (t.history_data.h) card.style.height = t.history_data.h + 'px';
-            if (t.history_data.gridSpan) card.style.gridColumn = t.history_data.gridSpan; // Add this
+            // --- PERSISTENT SIZE & GRID SPACING ---
+            const h = t.history_data || {};
             
+            // 1. Apply column span (Prevents horizontal overlap)
+            if (h.colSpan) {
+                card.style.gridColumn = `span ${h.colSpan}`;
+            } else if (h.gridSpan) {
+                card.style.gridColumn = h.gridSpan;
+            }
+
+            // 2. Apply row span (Prevents vertical overlap)
+            if (h.rowSpan) {
+                card.style.gridRow = `span ${h.rowSpan}`;
+            }
+
+            // 3. Set the physical size (Use 100% to fill the grid cells we just defined)
+            if (h.w) card.style.width = h.w + 'px';
+            if (h.h) card.style.height = h.h + 'px';
 
             card.innerHTML = `
                 <div class="card-header">
@@ -121,27 +134,29 @@ const app = {
                 </div>`;
             
             // Drag & Drop Handlers
-            card.ondragstart = (e) => { e.dataTransfer.setData('text/plain', t.id); card.classList.add('dragging'); };
+            card.ondragstart = (e) => { 
+                e.dataTransfer.setData('text/plain', t.id); 
+                card.classList.add('dragging'); 
+            };
             card.ondragend = () => card.classList.remove('dragging');
-            // Inside app.render() -> trackers.forEach loop
+            
             card.ondragover = (e) => {
                 e.preventDefault();
                 const draggingCard = document.querySelector('.dragging');
-                const container = document.getElementById('module-container');
-                
-                // Get all cards except the one we are dragging
                 const siblings = [...container.querySelectorAll('.module:not(.dragging)')];
 
-                // Find the sibling that we are dragging "over"
                 const nextSibling = siblings.find(sibling => {
                     const rect = sibling.getBoundingClientRect();
-                    // Check if the mouse is past the midpoint of the sibling card
-                    return e.clientY <= rect.top + rect.height / 2;
+                    // We check both X and Y for a more natural grid shuffle
+                    return e.clientY <= rect.top + rect.height / 2 && e.clientX <= rect.left + rect.width / 2;
                 });
 
                 container.insertBefore(draggingCard, nextSibling);
             };
+
             card.ondrop = () => this.saveNewOrder();
+            
+            // Mouseup handles both saving the final size and updating grid spans
             card.onmouseup = () => this.saveSize(t.id);
 
             container.appendChild(card);
@@ -184,22 +199,30 @@ const app = {
         const t = this.trackers.find(x => x.id === id);
         if (!el || !t) return;
 
-        const newW = el.offsetWidth;
-        const newH = el.offsetHeight;
+        const width = el.offsetWidth;
+        const height = el.offsetHeight;
 
-        // Calculate Grid Spanning
-        // If the card is wider than 650px, tell it to span 2 columns
-        const colSpan = newW > 650 ? 'span 2' : 'span 1';
-        el.style.gridColumn = colSpan;
+        // Logic: Every 350px of width adds another column span
+        let colSpan = Math.ceil(width / 350);
+        if (colSpan > 3) colSpan = 3; // Limit to 3 columns wide
 
-        if (t.history_data.w !== newW || t.history_data.h !== newH) {
+        // Logic: Every 250px of height adds another row span
+        let rowSpan = Math.ceil(height / 250);
+
+        // Apply the spans immediately so the grid reacts
+        el.style.gridColumn = `span ${colSpan}`;
+        el.style.gridRow = `span ${rowSpan}`;
+
+        // Reset inline width/height so it doesn't conflict with grid-span
+        el.style.width = "100%";
+        el.style.height = "100%";
+
+        if (t.history_data.colSpan !== colSpan || t.history_data.rowSpan !== rowSpan) {
             let history = { 
                 ...t.history_data, 
-                w: newW, 
-                h: newH, 
-                gridSpan: colSpan // Save this so it persists
+                colSpan: colSpan, 
+                rowSpan: rowSpan 
             };
-            
             await sb.from('trackers').update({ history_data: history }).eq('id', id);
         }
     },
