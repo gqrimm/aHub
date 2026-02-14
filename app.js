@@ -101,27 +101,35 @@ const app = {
             const card = document.createElement('div');
             card.className = `module type-${t.type}`;
             card.id = `card-${t.id}`;
-            card.draggable = true;
-
-            // Apply Spans
+            
+            // Apply Saved Spans and Sizes
             card.style.gridColumn = `span ${h.colSpan || 1}`;
             card.style.gridRow = `span ${h.rowSpan || 1}`;
             if(h.w) card.style.width = h.w + 'px';
             if(h.h) card.style.height = h.h + 'px';
 
             card.innerHTML = `
-                <div class="card-header" style="cursor: grab;">
+                <div class="card-header" draggable="true" style="cursor: grab;">
                     <span>${t.name}</span>
                     <button onclick="app.deleteTracker(${t.id})" style="background:none; border:none; cursor:pointer;">✕</button>
                 </div>
                 <div class="card-body">${this.getTypeHTML(t)}</div>`;
 
-            // Drag to Reorder
-            card.ondragstart = (e) => { card.classList.add('dragging'); e.dataTransfer.setData('text/plain', t.id); };
-            card.ondragend = () => card.classList.remove('dragging');
+            // --- DRAG TO MOVE LOGIC (Header Only) ---
+            const header = card.querySelector('.card-header');
+            
+            header.ondragstart = (e) => { 
+                card.classList.add('dragging'); 
+                e.dataTransfer.setData('text/plain', t.id); 
+            };
+            
+            header.ondragend = () => card.classList.remove('dragging');
+
             card.ondragover = (e) => {
                 e.preventDefault();
                 const draggingCard = document.querySelector('.dragging');
+                if (!draggingCard || draggingCard === card) return;
+
                 const siblings = [...container.querySelectorAll('.module:not(.dragging)')];
                 const nextSibling = siblings.find(s => {
                     const r = s.getBoundingClientRect();
@@ -129,9 +137,10 @@ const app = {
                 });
                 container.insertBefore(draggingCard, nextSibling);
             };
+
             card.ondrop = () => this.saveNewOrder();
 
-            // Resizing Logic (Grid Snapping)
+            // --- RESIZE SNAP LOGIC ---
             card.onmouseup = () => this.handleResize(t.id);
 
             container.appendChild(card);
