@@ -40,6 +40,37 @@ const app = {
         else this.switchWorkspace(spaceId);
     },
 
+    // --- WORKSPACE MANAGEMENT ---
+    renameWorkspace: async function() {
+        if (!this.currentWorkspace) return alert("Select a space to rename it.");
+        const newName = prompt("Enter new space name:");
+        if (!newName) return;
+
+        const { error } = await sb.from('user_workspaces')
+            .update({ workspace_name: newName })
+            .eq('workspace_id', this.currentWorkspace)
+            .eq('user_id', this.user.id);
+
+        if (error) alert(error.message);
+        else this.fetchWorkspaces(); // Refresh the list
+    },
+
+    deleteWorkspace: async function() {
+        if (!this.currentWorkspace) return;
+        if (!confirm("Are you sure? This will remove this space from your list (trackers will remain in the database).")) return;
+
+        const { error } = await sb.from('user_workspaces')
+            .delete()
+            .eq('workspace_id', this.currentWorkspace)
+            .eq('user_id', this.user.id);
+
+        if (error) alert(error.message);
+        else {
+            // Drop back to Private Space after deletion
+            this.switchWorkspace(null);
+        }
+    },
+
     switchWorkspace: function(id) {
         this.currentWorkspace = id || null;
         id ? localStorage.setItem('active_workspace', id) : localStorage.removeItem('active_workspace');
